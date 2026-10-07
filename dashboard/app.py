@@ -484,6 +484,7 @@ def overview_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
     left, right = st.columns([1.2, 1])
     with left:
         st.subheader("Bản đồ tỷ lệ hoàn thành theo bang")
+        st.warning("⚠️ **Lưu ý Ngụy biện sinh thái (Ecological Fallacy):** Màu sắc trên bản đồ thể hiện số liệu trung bình của toàn Bang. Dữ liệu này chỉ dùng để so sánh vĩ mô, tuyệt đối không suy diễn thành xác suất tốt nghiệp của một cá nhân sinh viên.")
         chart = px.choropleth(
             states,
             locations="state",
@@ -529,6 +530,7 @@ def overview_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
         )
 
     st.subheader(f"Điều kiện nào đi cùng chênh lệch giữa {lowest.state_name} và {highest.state_name}?")
+    st.info("💡 **Nghịch lý Simpson:** Nếu chỉ nhìn vào bản đồ, ta dễ kết luận sai lầm về chất lượng giáo dục của một Bang. Thực chất, kết quả thấp có thể do Bang đó có tỷ trọng các trường Cao đẳng 2 năm (vốn có tỷ lệ hoàn thành thấp) cao hơn hẳn các Bang khác. Bảng dưới đây sẽ bóc tách điều này.")
     low_context = state_context(frame, lowest.state)
     high_context = state_context(frame, highest.state)
     context_rows = [
@@ -567,7 +569,8 @@ def overview_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
     with left:
         st.subheader("Kết quả theo khu vực sống")
         locale = (
-            frame.groupby("locale_group")
+            frame[frame["locale_group"].notna() & (frame["locale_group"] != "Không xác định")]
+            .groupby("locale_group")
             .agg(completion=("completion_rate", "median"), group_count=("unitid", "nunique"))
             .reset_index()
             .query("group_count >= 10")
@@ -615,9 +618,12 @@ def overview_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
         st.plotly_chart(chart, width="stretch")
 
     finding(
-        "Kết luận về khác biệt địa lý",
-        f"{highest.state_name} cao hơn {lowest.state_name} {geographic_gap:.1%} về tỷ lệ hoàn thành.",
-        "Chênh lệch địa lý đi cùng khác biệt về duy trì học tập, đội ngũ giảng dạy và cơ cấu chương trình.",
+        "Kết luận về khác biệt địa lý (Trang 1)",
+        f"Bang cao nhất ({highest.state_name}) bỏ xa bang thấp nhất ({lowest.state_name}) tới {geographic_gap:.1%} về tỷ lệ hoàn thành.",
+        f"<b>Nghịch lý địa lý:</b> Sự hẻo lánh không tự động gây ra kết quả kém! Bằng chứng là {highest.state_name} có tỷ trọng trường ở nông thôn cao hơn hẳn {lowest.state_name}. "
+        f"Sự chênh lệch thực sự đến từ: <b>(1) Năng lực duy trì sinh viên sau năm nhất</b>, "
+        f"<b>(2) Nguồn lực giảng viên cơ hữu</b>, và <b>(3) Cơ cấu hệ đào tạo (Cử nhân vs Cao đẳng 2 năm)</b>. "
+        "Do đó, địa lý chỉ là bối cảnh, không phải nguyên nhân cốt lõi.",
     )
 
 
