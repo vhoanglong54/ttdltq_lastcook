@@ -375,7 +375,7 @@ def build_insights(
     insights.append(
         {
             "id": "INS-02",
-            "research_question": "RQ2/RQ3",
+            "research_question": "RQ3",
             "title": "Tiếp tục học sau năm nhất là yếu tố nổi bật nhất",
             "statement": (
                 f"Nhóm có tỷ lệ tiếp tục học sau năm nhất cao nhất có trung vị hoàn thành "

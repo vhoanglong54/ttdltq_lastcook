@@ -388,13 +388,14 @@ def build_report(output_path: Path | None = None) -> Path:
     ])
 
     _new_content_page(document, "1.2 Câu hỏi nghiên cứu")
+    _paragraph(document, "Trong các câu hỏi dưới đây, ‘kết quả’ được đo bằng tỷ lệ hoàn thành chương trình trong 150% thời gian chuẩn, tỷ lệ duy trì sau năm nhất hoặc tỷ lệ rút khỏi chương trình sau ba năm tùy câu hỏi. Đơn vị phân tích chính là cơ sở–năm; các mối liên hệ không được diễn giải thành nguyên nhân.")
     _bullets(document, [
-        "RQ1: Kết quả khác nhau thế nào giữa bang, loại trường, bậc đào tạo, địa bàn và hình thức đào tạo?",
-        "RQ2: Chi phí, Pell Grant và vay liên bang liên quan thế nào với hoàn thành/rút khỏi?",
-        "RQ3: Quy mô, tỷ lệ sinh viên/giảng viên, tuyển chọn và địa bàn liên quan thế nào với kết quả?",
-        "RQ4: Nhóm nhận Pell và thế hệ đầu có khoảng cách kết quả thế nào?",
-        "RQ5: Nhiều bất lợi xuất hiện đồng thời đi cùng kết quả ra sao?",
-        "RQ6: Logistic Regression cảnh báo completion thấp chính xác đến đâu?",
+        "RQ1: Tỷ lệ hoàn thành chương trình, duy trì sau năm nhất và rút khỏi chương trình khác nhau như thế nào giữa các bang, loại hình quản lý, bậc đào tạo chính, địa bàn và hình thức đào tạo từ xa?",
+        "RQ2: Chi phí ròng sau hỗ trợ, tỷ lệ sinh viên nhận Pell Grant và tỷ lệ sinh viên sử dụng khoản vay liên bang liên hệ theo hướng nào và mạnh đến đâu với tỷ lệ hoàn thành và rút khỏi chương trình?",
+        "RQ3: Tỷ lệ duy trì sau năm nhất, quy mô người học, số sinh viên trên một giảng viên, tỷ lệ giảng viên toàn thời gian, chi cho giảng dạy trên mỗi sinh viên và mức độ tuyển chọn liên hệ theo hướng nào với tỷ lệ hoàn thành?",
+        "RQ4: Tỷ lệ hoàn thành và rút khỏi chương trình sau ba năm chênh lệch bao nhiêu giữa nhóm nhận và không nhận Pell Grant, cũng như giữa nhóm thế hệ đầu và không phải thế hệ đầu học đại học trong các ô dữ liệu được công bố?",
+        "RQ5: Tỷ lệ hoàn thành và tỷ trọng cơ sở có tỷ lệ hoàn thành dưới 40% thay đổi ra sao khi đồng thời xuất hiện từ 0 đến 4 điều kiện: tỷ lệ nhận Pell cao, chi phí ròng cao, số sinh viên trên một giảng viên cao và tỷ lệ duy trì sau năm nhất thấp? Mối liên hệ này có tăng đều theo số điều kiện hay có nhóm ngoại lệ cần phân tích sâu?",
+        "RQ6: Logistic Regression có nhận diện được các nhóm cơ sở–năm có tỷ lệ hoàn thành dưới 40% trên năm kiểm tra ngoài thời gian hay không, và việc bổ sung tỷ lệ duy trì sau năm nhất cải thiện Accuracy, Recall, Balanced Accuracy và ROC-AUC đến mức nào?",
     ])
 
     _new_content_page(document, "1.3 Phạm vi và đơn vị phân tích")
