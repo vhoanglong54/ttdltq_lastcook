@@ -1,0 +1,37 @@
+[
+  {
+    "id": "INS-01",
+    "research_question": "RQ1",
+    "title": "Kết quả khác nhau rõ theo địa lý",
+    "statement": "Trong các bang có ít nhất 5 cơ sở, tỷ lệ hoàn thành có trọng số dao động từ 36.9% ở AK đến 66.1% ở VT.",
+    "caveat": "Khác biệt mô tả có thể phản ánh cơ cấu trường và sinh viên; không phải tác động riêng của bang."
+  },
+  {
+    "id": "INS-02",
+    "research_question": "RQ1/RQ3",
+    "title": "Loại hình cơ sở đi cùng khoảng cách hoàn thành",
+    "statement": "Tỷ lệ hoàn thành có trọng số thấp nhất ở nhóm Tư thục vì lợi nhuận (48.5%) và cao nhất ở nhóm Tư thục phi lợi nhuận (64.0%).",
+    "caveat": "Không kiểm soát đầy đủ khác biệt đầu vào và sứ mệnh đào tạo giữa các nhóm trường."
+  },
+  {
+    "id": "INS-03",
+    "research_question": "RQ2/RQ3",
+    "title": "Chỉ báo liên hệ mạnh nhất trong EDA",
+    "statement": "Duy trì năm đầu có liên hệ cùng chiều mạnh nhất với tỷ lệ hoàn thành trong các biến đã xét (Spearman rho=0.57, N=4,858).",
+    "caveat": "Hệ số tương quan không chứng minh quan hệ nhân quả và chưa kiểm soát đồng thời các biến khác."
+  },
+  {
+    "id": "INS-04",
+    "research_question": "RQ2/RQ4",
+    "title": "Khoảng cách theo nhu cầu hỗ trợ tài chính",
+    "statement": "Nhóm không nhận Pell Grant có tỷ lệ hoàn thành ba năm cao hơn nhóm nhận Pell khoảng 12.7% trong dữ liệu có thể công bố.",
+    "caveat": "Pell Grant là chỉ báo nhu cầu tài chính; dữ liệu Title IV và privacy suppression giới hạn tính đại diện."
+  },
+  {
+    "id": "INS-05",
+    "research_question": "RQ5",
+    "title": "Bất lợi cộng dồn đi cùng kết quả thấp hơn",
+    "statement": "Trung vị hoàn thành giảm từ 58.1% khi có 0 bất lợi xuống 51.1% khi có 4 bất lợi trong định nghĩa phân vị đã khóa.",
+    "caveat": "Chỉ số bất lợi là quy tắc mô tả dựa trên phân vị, không phải thang đo nhân quả."
+  }
+]

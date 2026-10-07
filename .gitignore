@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Environment and logs
+.env
+logs/*.log
+
+# Raw and intermediate data are reproducibly downloaded/generated.
+data/raw/*
+!data/raw/.gitkeep
+data/interim/*
+!data/interim/.gitkeep
+
+# Regenerable model/intermediate artifacts. Report and figures remain versionable
+# because they are rubric evidence and compact enough for the repository.
+models/*.joblib
+outputs/eda/*.csv
+

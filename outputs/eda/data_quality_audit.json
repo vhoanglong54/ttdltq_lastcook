@@ -1,0 +1,48 @@
+{
+  "source_rows": {
+    "scorecard_institution": 6429,
+    "scorecard_field_of_study": 229188
+  },
+  "processed_rows": {
+    "institutions": 6429,
+    "institutions_with_completion": 5256,
+    "institutions_with_coordinates": 5924,
+    "field_summary": 6839,
+    "equity_long": 14702,
+    "institution_history": 40321
+  },
+  "duplicate_unitid": 0,
+  "out_of_range_rates": {
+    "completion_rate": 0,
+    "retention_rate": 0,
+    "pell_share": 0,
+    "federal_loan_share": 0,
+    "withdrawal_3yr_rate": 0
+  },
+  "missing_rate": {
+    "completion_rate": 0.182455,
+    "retention_rate": 0.222119,
+    "pell_share": 0.12708,
+    "student_faculty_ratio": 0.12257,
+    "net_price": 0.196454,
+    "latitude": 0.07855,
+    "longitude": 0.07855
+  },
+  "target_distribution": {
+    "0": 3896,
+    "1": 1360
+  },
+  "checks": {
+    "minimum_source_rows_met": true,
+    "unique_unitid": true,
+    "rates_within_0_1": true
+  },
+  "history_years": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ]
+}

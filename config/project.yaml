@@ -1,0 +1,50 @@
+project:
+  title: "Nghiên cứu và phân tích các yếu tố ảnh hưởng đến kết quả học tập của sinh viên đại học"
+  analysis_unit: "institution_or_institution_program_group"
+  causal_claims_allowed: false
+
+quality:
+  minimum_source_rows: 5000
+  maximum_duplicate_unitid_rate: 0.0
+  valid_rate_min: 0.0
+  valid_rate_max: 1.0
+  privacy_codes: ["PS", "PrivacySuppressed", "NULL", "NA"]
+
+model:
+  target: "low_completion"
+  completion_threshold: 0.40
+  random_state: 42
+  test_size: 0.25
+  validation_size: 0.20
+  minimum_accuracy: 0.80
+  required_metrics:
+    - accuracy
+    - balanced_accuracy
+    - recall
+    - precision
+    - f1
+    - roc_auc
+  forbidden_features:
+    - completion_rate
+    - low_completion
+    - c150_4
+    - c150_l4
+  numeric_features:
+    - log_undergrad_enrollment
+    - pell_share
+    - federal_loan_share
+    - student_faculty_ratio
+    - net_price
+    - tuition_in_state
+    - retention_rate
+  categorical_features:
+    - predominant_degree
+    - control
+    - locale_group
+    - distance_only
+
+dashboard:
+  minimum_chart_types: 8
+  mandatory_geographic_map: true
+  default_max_institutions: 5000
+

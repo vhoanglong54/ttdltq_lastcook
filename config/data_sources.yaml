@@ -1,0 +1,31 @@
+scorecard:
+  institution:
+    url: "https://ed-public-download.scorecard.network/downloads/Most-Recent-Cohorts-Institution_05192025.zip"
+    archive_name: "scorecard_institution_2025-05-19.zip"
+  field_of_study:
+    url: "https://ed-public-download.scorecard.network/downloads/Most-Recent-Cohorts-Field-of-Study_04172025.zip"
+    archive_name: "scorecard_field_of_study_2025-04-17.zip"
+  history:
+    url: "https://ed-public-download.scorecard.network/downloads/College_Scorecard_Raw_Data_05192025.zip"
+    archive_name: "scorecard_history_2025-05-19.zip"
+
+ipeds:
+  base_url: "https://nces.ed.gov/ipeds/datacenter/data"
+  tables:
+    - id: "HD2023"
+      role: "Danh mục cơ sở và địa lý"
+    - id: "SFA2223"
+      role: "Hỗ trợ tài chính và giá thực trả 2022-23"
+    - id: "DRVGR2023"
+      role: "Tỷ lệ tốt nghiệp/hoàn thành được NCES dẫn xuất"
+    - id: "DRVEF2023"
+      role: "Quy mô, duy trì và tỷ lệ sinh viên/giảng viên"
+    - id: "C2023_A"
+      role: "Số văn bằng theo ngành và bậc đào tạo"
+
+documentation:
+  scorecard_catalog: "https://catalog.data.gov/dataset/college-scorecard"
+  scorecard_institution: "https://collegescorecard.ed.gov/assets/InstitutionDataDocumentation.pdf"
+  scorecard_field: "https://collegescorecard.ed.gov/assets/FieldOfStudyDataDocumentation.pdf"
+  ipeds_data_center: "https://nces.ed.gov/ipeds/use-the-data"
+

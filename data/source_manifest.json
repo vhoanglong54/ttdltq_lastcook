@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "scorecard_institution": {
+      "url": "https://ed-public-download.scorecard.network/downloads/Most-Recent-Cohorts-Institution_05192025.zip",
+      "retrieved_at_utc": "2026-10-07T04:41:32.442095+00:00",
+      "archive": "data\\raw\\scorecard\\downloads\\scorecard_institution_2025-05-19.zip",
+      "archive_bytes": 24026521,
+      "archive_sha256": "74d464963c2948b7b6e97df6864345055b177466325a2b06c54f0e50e910b8e4",
+      "extracted": [
+        {
+          "path": "data\\raw\\scorecard\\institution\\Most-Recent-Cohorts-Institution_05192025.csv",
+          "bytes": 103136944,
+          "sha256": "458657d8ebf95360a4849f561689ea5918859f1bd819c661131083d4e797f36b"
+        }
+      ]
+    },
+    "scorecard_field_of_study": {
+      "url": "https://ed-public-download.scorecard.network/downloads/Most-Recent-Cohorts-Field-of-Study_04172025.zip",
+      "retrieved_at_utc": "2026-10-07T04:41:33.264732+00:00",
+      "archive": "data\\raw\\scorecard\\downloads\\scorecard_field_of_study_2025-04-17.zip",
+      "archive_bytes": 14072548,
+      "archive_sha256": "73a5a9d74ea3fd1b17ee42e747cb8b23000b6d9f494af4a2466aba548a310957",
+      "extracted": [
+        {
+          "path": "data\\raw\\scorecard\\field_of_study\\Most-Recent-Cohorts-Field-of-Study.csv",
+          "bytes": 149448374,
+          "sha256": "b9ae6a040ea4d3da90b128089e8f0c901195302833c009678a2a31886c817957"
+        }
+      ]
+    },
+    "scorecard_history": {
+      "url": "https://ed-public-download.scorecard.network/downloads/College_Scorecard_Raw_Data_05192025.zip",
+      "retrieved_at_utc": "2026-10-07T04:41:51.488910+00:00",
+      "archive": "data\\raw\\scorecard\\downloads\\scorecard_history_2025-05-19.zip",
+      "archive_bytes": 413457084,
+      "archive_sha256": "cbcada959a1b62695c694fa7639bcb7c29382f178584fc442b647b1f2147a931",
+      "extracted": [
+        {
+          "path": "data\\raw\\scorecard\\history\\MERGED2017_18_PP.csv",
+          "bytes": 92591453,
+          "sha256": "3b5aa82305830a5668c4561a29a38555818acec07ed66b704ad20cf8ecaed7da"
+        },
+        {
+          "path": "data\\raw\\scorecard\\history\\MERGED2018_19_PP.csv",
+          "bytes": 91977117,
+          "sha256": "be4eb07c7a6adf05377b20cb928399775e7bcc55a37cd7f687c135ba7dc70acc"
+        },
+        {
+          "path": "data\\raw\\scorecard\\history\\MERGED2019_20_PP.csv",
+          "bytes": 93635161,
+          "sha256": "f3173c116f9d22690aea7fa560d579a1e4c21e456dc660d743056c6e5d2858d5"
+        },
+        {
+          "path": "data\\raw\\scorecard\\history\\MERGED2020_21_PP.csv",
+          "bytes": 75243984,
+          "sha256": "904944890a70b410a84fe8f8f4473a77d14b7260e64f5d55a27485d3ca0b7aee"
+        },
+        {
+          "path": "data\\raw\\scorecard\\history\\MERGED2021_22_PP.csv",
+          "bytes": 66450559,
+          "sha256": "7861c5c0e9aadb8f316da01a7e6163acd9963c169079f334a965bc4679426bd1"
+        },
+        {
+          "path": "data\\raw\\scorecard\\history\\MERGED2022_23_PP.csv",
+          "bytes": 65929692,
+          "sha256": "174df3504d674aeeef7155cd81997fb0615d28368ec94aeeb56142c9f3fe0b61"
+        }
+      ]
+    }
+  },
+  "protected_files": {
+    "RUBRIC IDV CUỐI KỲ.pdf": {
+      "sha256": "91e1a574badfb6b153fea91c519bd4489eaa83fd67aac7e591a7eb2d66a5b864",
+      "policy": "read_only_do_not_modify"
+    }
+  },
+  "updated_at_utc": "2026-10-07T04:41:53.651988+00:00"
+}

@@ -1,0 +1,23 @@
+﻿variable,meaning_vi,unit,source,role
+unitid,Mã cơ sở IPEDS,identifier,Scorecard/IPEDS,key
+institution_name,Tên cơ sở,text,Scorecard/IPEDS,dimension
+state,Mã bang/lãnh thổ,code,Scorecard/IPEDS,geography
+latitude,Vĩ độ,degree,Scorecard/IPEDS,geography
+longitude,Kinh độ,degree,Scorecard/IPEDS,geography
+control,Loại hình quản lý,category,IPEDS,factor
+locale_group,Đô thị/ngoại ô/thị trấn/nông thôn,category,IPEDS,factor
+distance_only,Cơ sở chỉ đào tạo từ xa,category,IPEDS,factor
+undergrad_enrollment,Quy mô sinh viên đại học,students,IPEDS,factor
+pell_share,Tỷ lệ sinh viên nhận Pell Grant,0-1,IPEDS,factor
+federal_loan_share,Tỷ lệ nhận khoản vay liên bang,0-1,IPEDS,factor
+student_faculty_ratio,Số sinh viên trên một giảng viên,ratio,IPEDS,factor
+net_price,Chi phí ròng trung bình sau hỗ trợ,USD,IPEDS,factor
+tuition_in_state,Học phí trong bang,USD,IPEDS,factor
+retention_rate,Tỷ lệ duy trì sau năm đầu,0-1,IPEDS,early_indicator
+completion_rate,Tỷ lệ hoàn thành trong 150% thời gian chuẩn,0-1,IPEDS,outcome
+withdrawal_3yr_rate,Tỷ lệ rút khỏi cơ sở sau ba năm,0-1,NSLDS,outcome
+low_completion,1 nếu completion_rate < 40%,binary,derived,target
+cip_code,Mã ngành CIP bốn chữ số,code,IPEDS,key
+field_name,Tên nhóm ngành,text,IPEDS,dimension
+credential_level,Mã bậc văn bằng,code,IPEDS/NSLDS,dimension
+credentials_awarded,Số văn bằng năm gần nhất IPEDSCOUNT2,awards,IPEDS,outcome_supplement

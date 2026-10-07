@@ -1,0 +1,80 @@
+{
+  "target": "low_completion",
+  "target_definition": "completion_rate < 0.40",
+  "positive_class": "institution with low completion rate",
+  "probability_cutoff": 0.5,
+  "features": {
+    "numeric": [
+      "log_undergrad_enrollment",
+      "pell_share",
+      "federal_loan_share",
+      "student_faculty_ratio",
+      "net_price",
+      "tuition_in_state",
+      "retention_rate"
+    ],
+    "categorical": [
+      "predominant_degree",
+      "control",
+      "locale_group",
+      "distance_only"
+    ]
+  },
+  "split": {
+    "strategy": "temporal_last_year_holdout",
+    "train_rows": 27887,
+    "test_rows": 5359,
+    "train_years": [
+      2017,
+      2018,
+      2019,
+      2020,
+      2021
+    ],
+    "test_years": [
+      2022
+    ]
+  },
+  "models": {
+    "baseline_logistic": {
+      "accuracy": 0.8175032655346147,
+      "balanced_accuracy": 0.7497148620763995,
+      "recall": 0.59251968503937,
+      "specificity": 0.9069100391134289,
+      "precision": 0.7166666666666667,
+      "f1": 0.6487068965517241,
+      "roc_auc": 0.8494892669055222,
+      "brier_score": 0.13261948884362848
+    },
+    "balanced_spline_logistic": {
+      "accuracy": 0.8154506437768241,
+      "balanced_accuracy": 0.8010681764518679,
+      "recall": 0.7677165354330708,
+      "specificity": 0.834419817470665,
+      "precision": 0.6481994459833795,
+      "f1": 0.7029137879243016,
+      "roc_auc": 0.8736672176082292,
+      "brier_score": 0.136047389433256
+    }
+  },
+  "selected_model": "balanced_spline_logistic",
+  "quality_gate": {
+    "accuracy_at_least_0_80": true,
+    "no_forbidden_features": true
+  },
+  "quality_gate_passed": true,
+  "diagnostic_targets": {
+    "balanced_accuracy_at_least_0_80": true,
+    "recall_at_least_0_80": false
+  },
+  "confusion_matrix": [
+    [
+      3200,
+      635
+    ],
+    [
+      354,
+      1170
+    ]
+  ]
+}
