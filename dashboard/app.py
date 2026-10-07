@@ -618,12 +618,6 @@ def overview_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
 
 def factor_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
     st.header("2 · Những yếu tố nào liên quan đến kết quả học tập?")
-    st.markdown(
-        '<div class="note"><b>Kết luận ngắn:</b> Việc tiếp tục học sau năm nhất là tín hiệu rõ nhất. '
-        "Số sinh viên trên mỗi giảng viên, khó khăn tài chính và nhiều điều kiện bất lợi cùng "
-        "xuất hiện cũng đi cùng khoảng cách kết quả.</div>",
-        unsafe_allow_html=True,
-    )
 
     retention = factor_levels(frame, "retention_rate")
     ratio = factor_levels(frame, "student_faculty_ratio")
@@ -631,20 +625,48 @@ def factor_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
     ratio_gap = ratio.iloc[-1].completion - ratio.iloc[0].completion
     equity_index = data["equity"].set_index("student_group")
     pell_gap = equity_index.loc["Không nhận Pell Grant", "completion_3yr_rate"] - equity_index.loc["Nhận Pell Grant", "completion_3yr_rate"]
+    first_generation_gap = equity_index.loc["Không phải thế hệ đầu", "completion_3yr_rate"] - equity_index.loc["Thế hệ đầu học đại học", "completion_3yr_rate"]
     disadvantage = data["disadvantage"]
-    disadvantage_gap = disadvantage.iloc[-1].median_completion_rate - disadvantage.iloc[0].median_completion_rate
+    peak_disadvantage = disadvantage.nlargest(1, "low_completion_share").iloc[0]
+
+    st.markdown(
+        f'<div class="note"><b>Kết luận điều hành:</b> Trong phạm vi bộ lọc hiện tại, '
+        f'khả năng tiếp tục học sau năm nhất là tín hiệu phân tách kết quả rõ nhất: nhóm '
+        f'cao nhất có trung vị hoàn thành chênh <b>{abs(retention_gap) * 100:.1f} điểm phần '
+        f'trăm</b> so với nhóm thấp nhất. Khoảng cách cũng đi cùng khả năng tiếp cận giảng '
+        f'viên và hoàn cảnh tài chính, vì vậy bộ phận quản lý học vụ nên ưu tiên theo dõi '
+        f'chuyển tiếp sau năm nhất, rồi phân tầng theo nguồn lực và nhu cầu hỗ trợ thay vì '
+        f'dựa vào một chỉ số riêng lẻ. Đây là bằng chứng liên hệ, không phải kết luận nhân quả.</div>',
+        unsafe_allow_html=True,
+    )
 
     first_row = st.columns(2)
     with first_row[0]:
-        finding("1. Tiếp tục học sau năm nhất", f"Chênh {retention_gap:+.1%}", "Nhóm cao nhất so với nhóm thấp nhất.")
+        finding(
+            "1. Tiếp tục học sau năm nhất",
+            f"Chênh {retention_gap * 100:+.1f} điểm phần trăm",
+            "Tín hiệu sàng lọc nổi bật; ưu tiên kiểm tra nhóm chuyển tiếp thấp sau năm đầu.",
+        )
     with first_row[1]:
-        finding("2. Sinh viên trên giảng viên", f"Chênh {ratio_gap:+.1%}", "Nhiều sinh viên/giảng viên đi cùng kết quả thấp hơn.")
+        finding(
+            "2. Sinh viên trên giảng viên",
+            f"Chênh {ratio_gap * 100:+.1f} điểm phần trăm",
+            "Áp lực tiếp cận giảng viên là dấu hiệu cần đối chiếu trong cùng loại hình đào tạo.",
+        )
     st.write("")
     second_row = st.columns(2)
     with second_row[0]:
-        finding("3. Khó khăn tài chính", f"Chênh {pell_gap:.1%}", "Nhóm không nhận Pell so với nhóm nhận Pell.")
+        finding(
+            "3. Khó khăn tài chính",
+            f"Chênh {pell_gap * 100:.1f} điểm phần trăm",
+            "Khoảng cách Pell gợi ý nhu cầu phối hợp hỗ trợ tài chính với cố vấn học tập.",
+        )
     with second_row[1]:
-        finding("4. Bất lợi cùng xuất hiện", f"Chênh {disadvantage_gap:+.1%}", "Từ 0 đến 4 điều kiện bất lợi.")
+        finding(
+            "4. Bất lợi cùng xuất hiện",
+            f"Đỉnh rủi ro ở {int(peak_disadvantage.disadvantage_count)} điều kiện",
+            f"Tỷ trọng dưới 40% đạt {peak_disadvantage.low_completion_share:.1%}; quan hệ không tăng tuyến tính.",
+        )
 
     st.subheader("Đi sâu vào một yếu tố")
     selected = st.selectbox("Chọn yếu tố", list(FACTOR_META), format_func=lambda key: FACTOR_META[key][0])
@@ -668,9 +690,34 @@ def factor_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
         chart.update_layout(height=450)
         st.plotly_chart(chart, width="stretch")
         gap = levels.iloc[-1].completion - levels.iloc[0].completion
+        low_level = levels.iloc[0]
+        high_level = levels.iloc[-1]
+        if selected == "retention_rate":
+            dynamic_insight = (
+                f"Trung vị hoàn thành tăng liên tục từ {low_level.completion:.1%} ở mức "
+                f"retention thấp nhất lên {high_level.completion:.1%} ở mức cao nhất, chênh "
+                f"{abs(gap) * 100:.1f} điểm phần trăm. Mẫu hình này cho thấy chuyển tiếp sau "
+                f"năm nhất là một mốc theo dõi thực hành quan trọng: nên kiểm tra sớm khó khăn "
+                f"học thuật, tài chính và khả năng hòa nhập ở nhóm retention thấp. Dữ liệu "
+                f"không chứng minh riêng retention tạo ra mức cải thiện đó."
+            )
+        elif selected == "student_faculty_ratio":
+            dynamic_insight = (
+                f"Khi tỷ lệ sinh viên/giảng viên chuyển từ mức thấp nhất sang cao nhất, trung "
+                f"vị hoàn thành {'tăng' if gap >= 0 else 'giảm'} {abs(gap) * 100:.1f} điểm "
+                f"phần trăm. Đây là dấu hiệu cần rà soát khả năng tiếp cận giảng viên và lớp "
+                f"hỗ trợ trong cùng loại hình, không phải bằng chứng sĩ số trực tiếp gây ra kết quả."
+            )
+        else:
+            dynamic_insight = (
+                f"Qua bốn mức của {label.lower()}, trung vị hoàn thành đi từ "
+                f"{low_level.completion:.1%} đến {high_level.completion:.1%}, "
+                f"{'tăng' if gap >= 0 else 'giảm'} {abs(gap) * 100:.1f} điểm phần trăm. "
+                f"Khoảng cách này giúp xác định nhóm cần drill-down theo loại hình và bậc đào "
+                f"tạo; chưa đủ để kết luận thay đổi riêng yếu tố này sẽ làm kết quả thay đổi tương ứng."
+            )
         st.success(
-            f"Nhận xét: từ mức thấp nhất đến cao nhất của “{label}”, tỷ lệ hoàn thành "
-            f"{'tăng' if gap >= 0 else 'giảm'} {abs(gap):.1%}."
+            dynamic_insight
         )
 
     left, right = st.columns([1.05, 0.95])
@@ -696,7 +743,21 @@ def factor_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
         )
         chart.update_yaxes(automargin=True)
         st.plotly_chart(chart, width="stretch")
-        st.caption("Số dương: yếu tố tăng cùng kết quả. Số âm: yếu tố tăng nhưng kết quả có xu hướng giảm.")
+        strongest_positive = corr.nlargest(1, "rho").iloc[0]
+        negative_factors = corr[corr["rho"] < 0]
+        strongest_negative = (
+            negative_factors.nsmallest(1, "rho").iloc[0]
+            if not negative_factors.empty
+            else corr.nsmallest(1, "rho").iloc[0]
+        )
+        st.caption(
+            f"Trong dữ liệu đang lọc, {strongest_positive['factor']} có liên hệ dương mạnh "
+            f"nhất (rho={strongest_positive['rho']:.2f}); {strongest_negative['factor']} có "
+            f"liên hệ thấp nhất (rho={strongest_negative['rho']:.2f}). Các biến học phí/chi "
+            f"phí có thể đồng thời phản ánh loại trường, bậc đào tạo và mức tuyển chọn, nên "
+            f"không được diễn giải rằng tăng chi phí sẽ cải thiện kết quả. Hành động phù hợp "
+            f"là đối chiếu các yếu tố trong cùng nhóm cơ sở trước khi đề xuất hỗ trợ."
+        )
     with right:
         st.subheader("Khu vực và loại hình kết hợp")
         matrix = frame.groupby(["locale_group", "control"])["completion_rate"].median().unstack()
@@ -715,6 +776,30 @@ def factor_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
         )
         chart.update_layout(height=500, margin=dict(l=0, r=0, t=10, b=0))
         st.plotly_chart(chart, width="stretch")
+        matrix_evidence = (
+            frame[frame["locale_group"].ne("Không xác định")]
+            .groupby(["locale_group", "control"], dropna=False)
+            .agg(
+                completion=("completion_rate", "median"),
+                group_count=("unitid", "nunique"),
+            )
+            .reset_index()
+            .dropna(subset=["completion"])
+            .query("group_count >= 10")
+        )
+        if not matrix_evidence.empty:
+            matrix_high = matrix_evidence.nlargest(1, "completion").iloc[0]
+            matrix_low = matrix_evidence.nsmallest(1, "completion").iloc[0]
+            st.caption(
+                f"Trong các ô đã xác định địa bàn và có ít nhất 10 cơ sở, nhóm "
+                f"{matrix_high['control']} · {str(matrix_high['locale_group']).lower()} có "
+                f"trung vị hoàn thành cao nhất ({matrix_high['completion']:.1%}, "
+                f"N={int(matrix_high['group_count'])}); nhóm {matrix_low['control']} · "
+                f"{str(matrix_low['locale_group']).lower()} thấp nhất "
+                f"({matrix_low['completion']:.1%}, N={int(matrix_low['group_count'])}). "
+                f"Đây là điểm khởi đầu để drill-down cơ cấu chương trình và nguồn lực, không "
+                f"phải bằng chứng loại hình hay địa bàn tự gây ra chênh lệch."
+            )
 
     left, right = st.columns(2)
     with left:
@@ -745,6 +830,14 @@ def factor_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
             margin=dict(l=15, r=15, t=75, b=45),
         )
         st.plotly_chart(chart, width="stretch")
+        st.caption(
+            f"Hai phép so sánh độc lập đều cho thấy khoảng cách: nhóm nhận Pell có tỷ lệ "
+            f"hoàn thành thấp hơn nhóm không nhận Pell {pell_gap * 100:.1f} điểm phần trăm; "
+            f"nhóm thế hệ đầu thấp hơn nhóm còn lại {first_generation_gap * 100:.1f} điểm "
+            f"phần trăm. Kết quả gợi ý cần phối hợp hỗ trợ tài chính với cố vấn học tập, nhưng "
+            f"dữ liệu tổng hợp hiện tại không cho biết Pell và thế hệ đầu cùng xuất hiện trên "
+            f"một cá nhân nên không thể kết luận về một ‘rào cản kép’."
+        )
     with right:
         st.subheader("Khi nhiều điều kiện bất lợi cùng xuất hiện")
         chart = make_subplots(specs=[[{"secondary_y": True}]])
@@ -759,6 +852,18 @@ def factor_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
             margin=dict(l=15, r=15, t=75, b=80),
         )
         st.plotly_chart(chart, width="stretch")
+        zero_disadvantage = disadvantage.loc[
+            disadvantage["disadvantage_count"].eq(0)
+        ].iloc[0]
+        st.caption(
+            f"Trên toàn bộ dữ liệu, tỷ trọng nhóm có completion dưới 40% tăng từ "
+            f"{zero_disadvantage.low_completion_share:.1%} khi không có điều kiện bất lợi "
+            f"lên cao nhất {peak_disadvantage.low_completion_share:.1%} ở mức "
+            f"{int(peak_disadvantage.disadvantage_count)} điều kiện "
+            f"(N={int(peak_disadvantage.institution_count)}). Các mức sau không tăng đều, "
+            f"nên chỉ số này chỉ dùng để sàng lọc nhóm cần phân tích sâu; trước khi đề xuất "
+            f"can thiệp phải kiểm tra quy mô và thành phần từng nhóm."
+        )
 
 
 def model_page(data: dict[str, Any], frame: pd.DataFrame) -> None:

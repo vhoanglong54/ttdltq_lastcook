@@ -21,16 +21,16 @@ bộ phân loại cuối cùng vẫn đúng thuật toán rubric.
 ## Kết quả trên test
 
 - Mô hình nền tảng — Accuracy: **0.801**, ROC-AUC: **0.847**
-- Mô hình sau năm nhất — Accuracy: **0.813**, ROC-AUC: **0.877**
+- Mô hình sau năm nhất — Accuracy: **0.813**, ROC-AUC: **0.876**
 
 Chỉ số chi tiết của mô hình sau năm nhất:
 
 - Accuracy: **0.813**
-- Balanced Accuracy: **0.799**
+- Balanced Accuracy: **0.798**
 - Recall nhóm rủi ro: **0.764**
-- Precision: **0.645**
-- F1: **0.700**
-- ROC-AUC: **0.877**
+- Precision: **0.644**
+- F1: **0.699**
+- ROC-AUC: **0.876**
 - Brier score: **0.133**
 
 Ngưỡng nghiệm thu bắt buộc của dự án là Accuracy >= 0,80 và không dùng biến 
@@ -44,13 +44,13 @@ Brier score đo chất lượng xác suất (càng thấp càng tốt).
 
 ## Yếu tố có giá trị dự báo lớn
 
-- `tuition_in_state`: permutation importance 0.0994
-- `retention_rate`: permutation importance 0.0546
-- `predominant_degree`: permutation importance 0.0523
-- `full_time_faculty_share`: permutation importance 0.0065
-- `control`: permutation importance 0.0041
-- `pell_share`: permutation importance 0.0021
-- `average_faculty_salary`: permutation importance 0.0007
+- `tuition_in_state`: permutation importance 0.0988
+- `retention_rate`: permutation importance 0.0543
+- `predominant_degree`: permutation importance 0.0517
+- `full_time_faculty_share`: permutation importance 0.0058
+- `control`: permutation importance 0.0040
+- `pell_share`: permutation importance 0.0019
+- `average_faculty_salary`: permutation importance 0.0004
 - `locale_group`: permutation importance 0.0000
 
 ## Giới hạn

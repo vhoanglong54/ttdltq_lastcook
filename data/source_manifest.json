@@ -3,7 +3,7 @@
   "sources": {
     "scorecard_institution": {
       "url": "https://ed-public-download.scorecard.network/downloads/Most-Recent-Cohorts-Institution_05192025.zip",
-      "retrieved_at_utc": "2026-10-07T04:41:32.442095+00:00",
+      "retrieved_at_utc": "2026-10-07T06:20:45.201320+00:00",
       "archive": "data\\raw\\scorecard\\downloads\\scorecard_institution_2025-05-19.zip",
       "archive_bytes": 24026521,
       "archive_sha256": "74d464963c2948b7b6e97df6864345055b177466325a2b06c54f0e50e910b8e4",
@@ -17,7 +17,7 @@
     },
     "scorecard_field_of_study": {
       "url": "https://ed-public-download.scorecard.network/downloads/Most-Recent-Cohorts-Field-of-Study_04172025.zip",
-      "retrieved_at_utc": "2026-10-07T04:41:33.264732+00:00",
+      "retrieved_at_utc": "2026-10-07T06:20:50.659306+00:00",
       "archive": "data\\raw\\scorecard\\downloads\\scorecard_field_of_study_2025-04-17.zip",
       "archive_bytes": 14072548,
       "archive_sha256": "73a5a9d74ea3fd1b17ee42e747cb8b23000b6d9f494af4a2466aba548a310957",
@@ -31,7 +31,7 @@
     },
     "scorecard_history": {
       "url": "https://ed-public-download.scorecard.network/downloads/College_Scorecard_Raw_Data_05192025.zip",
-      "retrieved_at_utc": "2026-10-07T04:41:51.488910+00:00",
+      "retrieved_at_utc": "2026-10-07T06:22:22.250207+00:00",
       "archive": "data\\raw\\scorecard\\downloads\\scorecard_history_2025-05-19.zip",
       "archive_bytes": 413457084,
       "archive_sha256": "cbcada959a1b62695c694fa7639bcb7c29382f178584fc442b647b1f2147a931",
@@ -75,5 +75,5 @@
       "policy": "read_only_do_not_modify"
     }
   },
-  "updated_at_utc": "2026-10-07T04:41:53.651988+00:00"
+  "updated_at_utc": "2026-10-07T06:22:24.374365+00:00"
 }
