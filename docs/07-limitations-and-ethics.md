@@ -8,8 +8,8 @@
   tuyệt đối cho mọi loại trường.
 - Retention rất gần quá trình hoàn thành về mặt thời gian, nên có sức dự báo cao nhưng
   không thể dùng để tuyên bố nguyên nhân.
-- Danh sách rủi ro không dùng để trừng phạt, xếp hạng công khai hay cắt hỗ trợ; chỉ dùng
-  để ưu tiên kiểm tra và hỗ trợ.
+- Dashboard không công bố danh sách rủi ro từng trường; xác suất chỉ được tổng hợp theo
+  nhóm yếu tố/bối cảnh để phục vụ nghiên cứu.
 - Không tải dữ liệu định danh cá nhân và không hiển thị thông tin sinh viên.
 - Kết quả ngành chỉ mô tả số văn bằng/nợ/thu nhập bổ sung; không gán nhãn tỷ lệ hoàn thành
   khi không có mẫu số thích hợp.

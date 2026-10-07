@@ -267,7 +267,8 @@ def save_diagnostic_plots(
 def write_model_card(
     metrics: dict[str, Any], feature_importance: pd.DataFrame
 ) -> None:
-    primary = metrics["models"]["balanced_spline_logistic"]
+    primary = metrics["models"][metrics["selected_model"]]
+    structural = metrics["models"]["structural_logistic"]
     split = metrics["split"]
     top_features = feature_importance.head(8)
     lines = [
@@ -275,14 +276,15 @@ def write_model_card(
         "",
         "## Mục tiêu",
         "",
-        "Dự báo cơ sở/nhóm cơ sở có tỷ lệ hoàn thành trong 150% thời gian chuẩn dưới 40%. ",
+        "Dự báo cơ sở/nhóm cơ sở có tỷ lệ hoàn thành trong 150% thời gian chuẩn dưới 40%.",
         "Mô hình không dự báo danh tính hay kết quả của từng sinh viên.",
         "",
         "## Thuật toán",
         "",
-        "Logistic Regression với trọng số cân bằng lớp. Các biến số liên tục được biến đổi ",
-        "bằng spline trước khi đi vào Logistic Regression để biểu diễn quan hệ phi tuyến; ",
-        "bộ phân loại cuối cùng vẫn là Logistic Regression đúng yêu cầu rubric.",
+        "Hai kịch bản đều dùng Logistic Regression với trọng số cân bằng lớp. Mô hình nền tảng",
+        "dùng bối cảnh tài chính, nguồn lực và loại hình; mô hình sau năm nhất bổ sung tỷ lệ",
+        "tiếp tục học. Biến số liên tục được biến đổi bằng spline trước Logistic Regression;",
+        "bộ phân loại cuối cùng vẫn đúng thuật toán rubric.",
         "",
         "## Chia dữ liệu",
         "",
@@ -291,6 +293,11 @@ def write_model_card(
         f"- Test: {split['test_rows']:,} dòng",
         "",
         "## Kết quả trên test",
+        "",
+        f"- Mô hình nền tảng — Accuracy: **{structural['accuracy']:.3f}**, ROC-AUC: **{structural['roc_auc']:.3f}**",
+        f"- Mô hình sau năm nhất — Accuracy: **{primary['accuracy']:.3f}**, ROC-AUC: **{primary['roc_auc']:.3f}**",
+        "",
+        "Chỉ số chi tiết của mô hình sau năm nhất:",
         "",
         f"- Accuracy: **{primary['accuracy']:.3f}**",
         f"- Balanced Accuracy: **{primary['balanced_accuracy']:.3f}**",
@@ -335,20 +342,23 @@ def train_all(*, prefer_temporal: bool = True) -> dict[str, Any]:
     config = load_yaml("project.yaml")
     model_config = config["model"]
     target = model_config["target"]
-    numeric = list(model_config["numeric_features"])
+    structural_numeric = list(model_config["structural_numeric_features"])
+    early_warning_numeric = list(model_config["early_warning_numeric_features"])
     categorical = list(model_config["categorical_features"])
-    features = categorical + numeric
-    validate_features(features, list(model_config["forbidden_features"]), target)
+    structural_features = categorical + structural_numeric
+    early_warning_features = categorical + early_warning_numeric
+    all_features = list(dict.fromkeys(structural_features + early_warning_features))
+    validate_features(all_features, list(model_config["forbidden_features"]), target)
 
     frame, has_history = load_model_frame()
-    required = set(features + [target, "unitid"])
+    required = set(all_features + [target, "unitid"])
     missing = sorted(required - set(frame.columns))
     if missing:
         raise ValueError(f"Model data is missing columns: {missing}")
 
     X_train, X_test, y_train, y_test, split = split_frame(
         frame,
-        features,
+        all_features,
         target,
         random_state=int(model_config["random_state"]),
         test_size=float(model_config["test_size"]),
@@ -357,25 +367,38 @@ def train_all(*, prefer_temporal: bool = True) -> dict[str, Any]:
     )
 
     candidates = {
-        "baseline_logistic": make_model(
-            numeric, categorical, nonlinear=False, balanced=False
+        "structural_logistic": (
+            make_model(
+                structural_numeric,
+                categorical,
+                nonlinear=True,
+                balanced=True,
+            ),
+            structural_features,
         ),
-        "balanced_spline_logistic": make_model(
-            numeric, categorical, nonlinear=True, balanced=True
+        "early_warning_logistic": (
+            make_model(
+                early_warning_numeric,
+                categorical,
+                nonlinear=True,
+                balanced=True,
+            ),
+            early_warning_features,
         ),
     }
     results: dict[str, dict[str, float]] = {}
     fitted: dict[str, Pipeline] = {}
     test_outputs: dict[str, tuple[np.ndarray, np.ndarray]] = {}
-    for name, candidate in candidates.items():
-        candidate.fit(X_train, y_train)
-        probability = candidate.predict_proba(X_test)[:, 1]
+    for name, (candidate, candidate_features) in candidates.items():
+        candidate.fit(X_train[candidate_features], y_train)
+        probability = candidate.predict_proba(X_test[candidate_features])[:, 1]
         prediction = (probability >= 0.5).astype(int)
         results[name] = metric_bundle(y_test, prediction, probability)
         fitted[name] = candidate
         test_outputs[name] = (prediction, probability)
 
-    primary_name = "balanced_spline_logistic"
+    primary_name = "early_warning_logistic"
+    features = early_warning_features
     primary = fitted[primary_name]
     prediction, probability = test_outputs[primary_name]
     primary_metrics = results[primary_name]
@@ -416,7 +439,6 @@ def train_all(*, prefer_temporal: bool = True) -> dict[str, Any]:
             column
             for column in [
                 "unitid",
-                "institution_name",
                 "state",
                 "control",
                 "predominant_degree",
@@ -461,7 +483,6 @@ def train_all(*, prefer_temporal: bool = True) -> dict[str, Any]:
             column
             for column in [
                 "unitid",
-                "institution_name",
                 "state",
                 "control",
                 "predominant_degree",
@@ -495,9 +516,24 @@ def train_all(*, prefer_temporal: bool = True) -> dict[str, Any]:
     metrics: dict[str, Any] = {
         "target": target,
         "target_definition": "completion_rate < 0.40",
-        "positive_class": "institution with low completion rate",
+        "positive_class": "institution-year group with completion rate below 40%",
         "probability_cutoff": 0.5,
-        "features": {"numeric": numeric, "categorical": categorical},
+        "features": {
+            "numeric": early_warning_numeric,
+            "categorical": categorical,
+        },
+        "model_feature_sets": {
+            "structural_logistic": {
+                "meaning": "Bối cảnh tài chính, nguồn lực và loại hình; không dùng retention",
+                "numeric": structural_numeric,
+                "categorical": categorical,
+            },
+            "early_warning_logistic": {
+                "meaning": "Mô hình nền tảng cộng tỷ lệ tiếp tục học sau năm nhất",
+                "numeric": early_warning_numeric,
+                "categorical": categorical,
+            },
+        },
         "split": asdict(split),
         "models": results,
         "selected_model": primary_name,
@@ -528,7 +564,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     metrics = train_all(prefer_temporal=args.prefer_temporal)
-    print(json.dumps(metrics, ensure_ascii=False, indent=2))
+    # ASCII-safe console output also works in the default Windows cp1252 terminal.
+    print(json.dumps(metrics, ensure_ascii=True, indent=2))
 
 
 if __name__ == "__main__":

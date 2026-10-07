@@ -12,7 +12,8 @@ thành quan hệ nhân quả.
 - Đơn vị phân tích: cơ sở, nhóm cơ sở, ngành/bậc đào tạo và năm; không phải hồ
   sơ định danh từng sinh viên.
 - Mô hình: Logistic Regression cảnh báo nhóm cơ sở có tỷ lệ hoàn thành dưới
-  40%.
+  40%; dashboard chỉ ra nhóm ưu tiên, yếu tố làm xác suất dự báo cao hơn và
+  hướng cải thiện cần kiểm tra.
 - Trực quan: Streamlit + Plotly, có bản đồ địa lý, bộ lọc, drill-down,
   tooltip và cross-filter.
 - Thu nhập sau tốt nghiệp chỉ là kết quả bổ sung.

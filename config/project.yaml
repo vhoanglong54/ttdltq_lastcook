@@ -29,13 +29,30 @@ model:
     - low_completion
     - c150_4
     - c150_l4
-  numeric_features:
+  structural_numeric_features:
     - log_undergrad_enrollment
     - pell_share
     - federal_loan_share
     - student_faculty_ratio
     - net_price
     - tuition_in_state
+    - admission_rate
+    - instructional_spend_per_fte
+    - average_faculty_salary
+    - full_time_faculty_share
+    - age_25_plus_share
+  early_warning_numeric_features:
+    - log_undergrad_enrollment
+    - pell_share
+    - federal_loan_share
+    - student_faculty_ratio
+    - net_price
+    - tuition_in_state
+    - admission_rate
+    - instructional_spend_per_fte
+    - average_faculty_salary
+    - full_time_faculty_share
+    - age_25_plus_share
     - retention_rate
   categorical_features:
     - predominant_degree

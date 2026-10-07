@@ -2,14 +2,15 @@
 
 ## Mục tiêu
 
-Dự báo cơ sở/nhóm cơ sở có tỷ lệ hoàn thành trong 150% thời gian chuẩn dưới 40%. 
+Dự báo cơ sở/nhóm cơ sở có tỷ lệ hoàn thành trong 150% thời gian chuẩn dưới 40%.
 Mô hình không dự báo danh tính hay kết quả của từng sinh viên.
 
 ## Thuật toán
 
-Logistic Regression với trọng số cân bằng lớp. Các biến số liên tục được biến đổi 
-bằng spline trước khi đi vào Logistic Regression để biểu diễn quan hệ phi tuyến; 
-bộ phân loại cuối cùng vẫn là Logistic Regression đúng yêu cầu rubric.
+Hai kịch bản đều dùng Logistic Regression với trọng số cân bằng lớp. Mô hình nền tảng
+dùng bối cảnh tài chính, nguồn lực và loại hình; mô hình sau năm nhất bổ sung tỷ lệ
+tiếp tục học. Biến số liên tục được biến đổi bằng spline trước Logistic Regression;
+bộ phân loại cuối cùng vẫn đúng thuật toán rubric.
 
 ## Chia dữ liệu
 
@@ -19,13 +20,18 @@ bộ phân loại cuối cùng vẫn là Logistic Regression đúng yêu cầu r
 
 ## Kết quả trên test
 
-- Accuracy: **0.815**
-- Balanced Accuracy: **0.801**
-- Recall nhóm rủi ro: **0.768**
-- Precision: **0.648**
-- F1: **0.703**
-- ROC-AUC: **0.874**
-- Brier score: **0.136**
+- Mô hình nền tảng — Accuracy: **0.801**, ROC-AUC: **0.847**
+- Mô hình sau năm nhất — Accuracy: **0.813**, ROC-AUC: **0.877**
+
+Chỉ số chi tiết của mô hình sau năm nhất:
+
+- Accuracy: **0.813**
+- Balanced Accuracy: **0.799**
+- Recall nhóm rủi ro: **0.764**
+- Precision: **0.645**
+- F1: **0.700**
+- ROC-AUC: **0.877**
+- Brier score: **0.133**
 
 Ngưỡng nghiệm thu bắt buộc của dự án là Accuracy >= 0,80 và không dùng biến 
 rò rỉ mục tiêu. Balanced Accuracy và Recall >= 0,80 là mục tiêu chẩn đoán bổ sung, 
@@ -38,14 +44,14 @@ Brier score đo chất lượng xác suất (càng thấp càng tốt).
 
 ## Yếu tố có giá trị dự báo lớn
 
-- `tuition_in_state`: permutation importance 0.1346
-- `retention_rate`: permutation importance 0.0745
-- `predominant_degree`: permutation importance 0.0629
-- `control`: permutation importance 0.0115
-- `federal_loan_share`: permutation importance 0.0085
-- `pell_share`: permutation importance 0.0070
-- `net_price`: permutation importance 0.0017
-- `log_undergrad_enrollment`: permutation importance 0.0008
+- `tuition_in_state`: permutation importance 0.0994
+- `retention_rate`: permutation importance 0.0546
+- `predominant_degree`: permutation importance 0.0523
+- `full_time_faculty_share`: permutation importance 0.0065
+- `control`: permutation importance 0.0041
+- `pell_share`: permutation importance 0.0021
+- `average_faculty_salary`: permutation importance 0.0007
+- `locale_group`: permutation importance 0.0000
 
 ## Giới hạn
 

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Iterable, Sequence
 
+import joblib
 import matplotlib.pyplot as plt
 import pandas as pd
 from docx import Document
@@ -20,6 +21,13 @@ from ttdltq.config import MODEL_DIR, OUTPUT_DIR, PROCESSED_DIR, PROJECT_ROOT
 REPORT_DIR = PROJECT_ROOT / "report"
 FIGURE_DIR = OUTPUT_DIR / "figures"
 TITLE = "Nghiên cứu và phân tích các yếu tố ảnh hưởng đến kết quả học tập của sinh viên đại học"
+
+
+def _weighted_mean(values: pd.Series, weights: pd.Series) -> float:
+    valid = values.notna() & weights.notna() & (weights > 0)
+    if not valid.any():
+        return float("nan")
+    return float((values[valid] * weights[valid]).sum() / weights[valid].sum())
 
 
 def _set_cell_shading(cell, fill: str) -> None:
@@ -214,6 +222,9 @@ def _load_inputs() -> dict:
         "importance": pd.read_csv(MODEL_DIR / "feature_importance.csv"),
         "confusion": pd.read_csv(MODEL_DIR / "confusion_matrix.csv", index_col=0),
         "disadvantage": pd.read_csv(OUTPUT_DIR / "eda" / "disadvantage_summary.csv"),
+        "predictions": pd.read_csv(PROCESSED_DIR / "model_predictions.csv"),
+        "institutions": pd.read_csv(PROCESSED_DIR / "institutions.csv", low_memory=False),
+        "model": joblib.load(MODEL_DIR / "logistic_completion.joblib"),
     }
 
 
@@ -223,6 +234,98 @@ def build_report(output_path: Path | None = None) -> Path:
     data = _load_inputs()
     metrics = data["metrics"]
     selected = metrics["models"][metrics["selected_model"]]
+    structural = metrics["models"]["structural_logistic"]
+    predictions = data["predictions"]
+    predicted_low_count = int(predictions["predicted_low_completion"].sum())
+    high_risk_count = int((predictions["risk_level"] == "Cao").sum())
+    prediction_count = len(predictions)
+    prediction_model = data["model"]
+    model_features = list(prediction_model.feature_names_in_)
+    merge_columns = [
+        "unitid",
+        *[feature for feature in model_features if feature not in predictions.columns],
+    ]
+    explained_predictions = predictions.merge(
+        data["institutions"][merge_columns].drop_duplicates("unitid"),
+        on="unitid",
+        how="inner",
+    )
+    priority_groups = (
+        explained_predictions.groupby(
+            ["predominant_degree", "control", "locale_group"], dropna=False
+        )
+        .agg(
+            group_count=("unitid", "nunique"),
+            average_risk=("risk_probability", "mean"),
+            median_completion=("completion_rate", "median"),
+            median_retention=("retention_rate", "median"),
+        )
+        .reset_index()
+        .query("group_count >= 20 and average_risk >= 0.5")
+        .sort_values("average_risk", ascending=False)
+    )
+    top_priority = priority_groups.iloc[0]
+    priority_degree_label = {
+        "Associate": "Cao đẳng 2 năm (Associate)",
+        "Bachelor": "Cử nhân (Bachelor)",
+        "Graduate": "Sau đại học (Graduate)",
+    }.get(top_priority.predominant_degree, top_priority.predominant_degree)
+    top_priority_rows = explained_predictions[
+        (explained_predictions["predominant_degree"] == top_priority.predominant_degree)
+        & (explained_predictions["control"] == top_priority.control)
+        & (explained_predictions["locale_group"] == top_priority.locale_group)
+    ]
+    reference_retention = float(data["institutions"]["retention_rate"].median())
+    counterfactual = top_priority_rows[model_features].copy()
+    counterfactual["retention_rate"] = reference_retention
+    retention_risk_gap = float(
+        top_priority.average_risk - prediction_model.predict_proba(counterfactual)[:, 1].mean()
+    )
+    reference_full_time_faculty = float(
+        data["institutions"]["full_time_faculty_share"].median()
+    )
+    priority_full_time_faculty = float(
+        top_priority_rows["full_time_faculty_share"].median()
+    )
+    counterfactual = top_priority_rows[model_features].copy()
+    counterfactual["full_time_faculty_share"] = reference_full_time_faculty
+    faculty_risk_gap = float(
+        top_priority.average_risk - prediction_model.predict_proba(counterfactual)[:, 1].mean()
+    )
+    institutions = data["institutions"]
+    state_rows = []
+    for state, part in institutions.groupby("state"):
+        if len(part) < 5:
+            continue
+        state_rows.append(
+            {
+                "state": state,
+                "completion": _weighted_mean(
+                    part["completion_rate"], part["undergrad_enrollment"]
+                ),
+            }
+        )
+    state_results = pd.DataFrame(state_rows).dropna(subset=["completion"])
+    lowest_state = state_results.nsmallest(1, "completion").iloc[0]
+    highest_state = state_results.nlargest(1, "completion").iloc[0]
+    state_names = {"AK": "Alaska", "VT": "Vermont"}
+    lowest_state_name = state_names.get(lowest_state.state, lowest_state.state)
+    highest_state_name = state_names.get(highest_state.state, highest_state.state)
+
+    def state_context(state: str) -> dict[str, float]:
+        part = institutions[institutions["state"] == state]
+        weights = part["undergrad_enrollment"]
+        return {
+            "retention": _weighted_mean(part["retention_rate"], weights),
+            "full_time_faculty": float(part["full_time_faculty_share"].median()),
+            "bachelor_share": float((part["predominant_degree"] == "Bachelor").mean()),
+            "rural_town_share": float(
+                part["locale_group"].isin(["Nông thôn", "Thị trấn"]).mean()
+            ),
+        }
+
+    lowest_state_context = state_context(lowest_state.state)
+    highest_state_context = state_context(highest_state.state)
     architecture = build_architecture_figure()
 
     document = Document()
@@ -251,8 +354,8 @@ def build_report(output_path: Path | None = None) -> Path:
 
     _new_content_page(document, "Tóm tắt", 1)
     _paragraph(document, f"Nghiên cứu phân tích {data['audit']['processed_rows']['institutions']:,} cơ sở và {data['audit']['processed_rows']['institution_history']:,} quan sát cơ sở–năm để làm rõ sự khác biệt kết quả hoàn thành chương trình theo địa lý, loại hình, tài chính và nguồn lực.")
-    _paragraph(document, "EDA cho thấy tỷ lệ duy trì sau năm đầu có liên hệ cùng chiều mạnh nhất trong nhóm biến đã xét; dữ liệu nhóm Pell Grant cho thấy một khoảng cách hoàn thành đáng kể. Dashboard ba trang dẫn người dùng từ bản đồ toàn quốc đến yếu tố liên quan và danh sách cảnh báo.")
-    _paragraph(document, f"Logistic Regression được đánh giá trên năm 2022 chưa dùng để train, đạt Accuracy {selected['accuracy']:.2%}, Balanced Accuracy {selected['balanced_accuracy']:.2%} và ROC-AUC {selected['roc_auc']:.3f}. Kết quả vượt ngưỡng Accuracy 80% nhưng Recall {selected['recall']:.2%} cho thấy vẫn có trường hợp rủi ro bị bỏ sót.")
+    _paragraph(document, "EDA cho thấy tỷ lệ duy trì sau năm đầu có liên hệ cùng chiều mạnh nhất trong nhóm biến đã xét; dữ liệu nhóm Pell Grant cho thấy một khoảng cách hoàn thành đáng kể. Dashboard ba trang dẫn người dùng từ bản đồ toàn quốc đến yếu tố liên quan và các nhóm cần ưu tiên kiểm tra.")
+    _paragraph(document, f"Hai kịch bản Logistic Regression được đánh giá trên năm 2022 chưa dùng để train. Mô hình điều kiện nền tảng đạt Accuracy {structural['accuracy']:.2%}; mô hình bổ sung thông tin tiếp tục học sau năm nhất đạt Accuracy {selected['accuracy']:.2%} và ROC-AUC {selected['roc_auc']:.3f}. Cả hai vượt ngưỡng Accuracy 80%.")
     _paragraph(document, "Từ khóa: higher education, completion rate, College Scorecard, IPEDS, Streamlit, Plotly, Logistic Regression, early warning.")
 
     _new_content_page(document, "Mục lục", 1)
@@ -357,7 +460,17 @@ def build_report(output_path: Path | None = None) -> Path:
     _new_content_page(document, "4. Khám phá dữ liệu (EDA)", 1)
     _paragraph(document, "EDA dùng Matplotlib/Seaborn và sinh năm hình tĩnh trước dashboard, đúng yêu cầu rubric. Mỗi hình trả lời một câu hỏi, không chỉ minh họa dữ liệu.")
     eda_pages = [
-        ("4.1 Phân bố theo bang", "eda_state_completion.png", "Hình 2. Tỷ lệ hoàn thành có trọng số theo các bang thấp/cao.", "Khoảng cách địa lý là tín hiệu để drill-down, không phải ước lượng tác động của bang."),
+        (
+            "4.1 Phân bố theo bang",
+            "eda_state_completion.png",
+            "Hình 2. Tỷ lệ hoàn thành có trọng số theo các bang thấp/cao.",
+            f"{highest_state_name} đạt {highest_state.completion:.1%}, cao hơn "
+            f"{lowest_state_name} ở mức {lowest_state.completion:.1%}. Bang kết quả cao có "
+            f"retention {highest_state_context['retention']:.1%} và tỷ lệ giảng viên toàn "
+            f"thời gian {highest_state_context['full_time_faculty']:.1%}; bang kết quả thấp "
+            f"lần lượt đạt {lowest_state_context['retention']:.1%} và "
+            f"{lowest_state_context['full_time_faculty']:.1%}.",
+        ),
         ("4.2 Phân bố theo loại hình", "eda_completion_by_control.png", "Hình 3. Box plot tỷ lệ hoàn thành theo loại hình.", "Box plot thể hiện trung vị, độ phân tán và ngoại lai, tránh chỉ so sánh một số trung bình."),
         ("4.3 Duy trì và hoàn thành", "eda_retention_completion_scatter.png", "Hình 4. Scatter retention–completion.", "Liên hệ cùng chiều giúp xác định retention là chỉ báo sớm có giá trị phân tích."),
         ("4.4 Ma trận liên hệ yếu tố", "eda_factor_correlation_heatmap.png", "Hình 5. Spearman correlation với completion.", "Spearman phù hợp quan hệ đơn điệu và ít nhạy hơn Pearson trước ngoại lai/phân phối lệch."),
@@ -377,16 +490,30 @@ def build_report(output_path: Path | None = None) -> Path:
 
     # Chapter 5 dashboard
     _new_content_page(document, "5. Thiết kế dashboard", 1)
-    _paragraph(document, "Dashboard gồm ba trang theo đúng mạch story: bức tranh toàn quốc, tác nhân/khoảng cách và cảnh báo sớm. Màu đỏ dành cho rủi ro; xanh lá cho kết quả tốt; các màu trung tính cho nhóm so sánh.")
+    _paragraph(document, "Dashboard gồm ba trang theo đúng mạch story: khác biệt kết quả, các yếu tố liên quan và khả năng dự báo khi kết hợp yếu tố. Màu đỏ dành cho rủi ro; xanh lá cho kết quả tốt; các màu trung tính cho nhóm so sánh.")
     dashboard_pages = [
-        ("5.1 Trang toàn quốc", "KPI, choropleth, xếp hạng bang, 100% stacked bar và point map. Người dùng lọc từ toàn quốc xuống bang và cơ sở."),
-        ("5.2 Geographic Map", "Choropleth dùng mã bang và tỷ lệ completion có trọng số. Point map dùng tọa độ từng cơ sở. Tooltip cung cấp tên, quy mô, retention và completion."),
-        ("5.3 Trang tác nhân", "Scatter + trend, box plot, heatmap, grouped bar, biểu đồ kết hợp và treemap trả lời yếu tố nào đi cùng kết quả và khoảng cách nhóm."),
-        ("5.4 Trang mô hình", "Gauge, donut, confusion matrix, feature importance và action list tích hợp xác suất dự báo vào dashboard."),
+        (
+            "5.1 Trang toàn quốc",
+            "KPI, choropleth, so sánh bang, khu vực sống và cơ cấu theo bậc đào tạo. "
+            "Ngay dưới bản đồ là bảng giải thích chênh lệch bằng retention, giảng viên toàn "
+            "thời gian, nhu cầu tài chính, cơ cấu bậc đào tạo và mức nông thôn/thị trấn.",
+        ),
+        (
+            "5.2 Geographic Map",
+            f"Choropleth dùng mã bang và tỷ lệ completion có trọng số. So sánh "
+            f"{lowest_state_name}–{highest_state_name} cho thấy retention chênh "
+            f"{highest_state_context['retention'] - lowest_state_context['retention']:+.1%}, "
+            f"giảng viên toàn thời gian chênh "
+            f"{highest_state_context['full_time_faculty'] - lowest_state_context['full_time_faculty']:+.1%} "
+            f"và cơ cấu cử nhân chênh "
+            f"{highest_state_context['bachelor_share'] - lowest_state_context['bachelor_share']:+.1%}.",
+        ),
+        ("5.3 Trang yếu tố", "Biểu đồ bốn mức, scatter hệ số, heatmap, grouped bar và biểu đồ kết hợp trả lời yếu tố nào đi cùng kết quả và khoảng cách nhóm."),
+        ("5.4 Trang mô hình", "KPI dự báo, so sánh hai kịch bản, gauge, donut, confusion matrix, feature importance, ma trận tiếp tục học–nguồn lực và rủi ro tổng hợp theo nhóm; không xếp hạng từng trường."),
         ("5.5 Bộ lọc", "Bang, loại cơ sở, bậc đào tạo, locale và distance-only là filter toàn cục. Risk level là filter tại trang mô hình."),
-        ("5.6 Drill-down", "Luồng drill-down từ toàn quốc đến bang rồi cơ sở; từ bậc văn bằng đến ngành. Các KPI và chart được tính lại trên ngữ cảnh lọc."),
+        ("5.6 Drill-down", "Luồng drill-down bằng bộ lọc từ toàn quốc đến bang rồi loại hình/bậc đào tạo. Các KPI và chart được tính lại trên ngữ cảnh lọc."),
         ("5.7 Tooltip và cross-filter", "Plotly hover giải thích từng điểm. Bộ lọc chung tạo cross-filter đồng thời các thành phần, tránh mỗi biểu đồ hiển thị một population khác nhau."),
-        ("5.8 Logic chọn biểu đồ", "Map trả lời ở đâu; bar trả lời xếp hạng/cơ cấu; scatter trả lời liên hệ; box trả lời phân bố; heatmap trả lời cường độ; treemap trả lời cơ cấu phân cấp; gauge/table phục vụ hành động."),
+        ("5.8 Logic chọn biểu đồ", "Map trả lời ở đâu; bar trả lời cơ cấu; line bốn mức cho thấy chiều thay đổi; scatter trả lời độ mạnh liên hệ; heatmap trả lời tương tác; gauge và confusion matrix giải thích dự báo."),
         ("5.9 Khả năng đọc", "Trục tỷ lệ dùng phần trăm, title/legend thống nhất, tooltip không hiển thị cột kỹ thuật. Caption cảnh báo khi biến ngành chỉ là số văn bằng."),
     ]
     for heading, body in dashboard_pages:
@@ -394,22 +521,18 @@ def build_report(output_path: Path | None = None) -> Path:
         _paragraph(document, body)
         _paragraph(document, "Thiết kế ưu tiên một câu hỏi cho mỗi biểu đồ và một kết luận ngắn, tránh biểu đồ phân cấp quá nhiều lát gây rối mắt.")
 
-    _new_content_page(document, "5.10 Danh mục 14 loại hiển thị")
+    _new_content_page(document, "5.10 Danh mục các loại hiển thị")
     _table(document, ["STT", "Loại", "Mục đích"], [
         (1, "Choropleth", "Phân bố completion theo bang"),
-        (2, "Scatter geo", "Điểm từng cơ sở"),
-        (3, "Horizontal bar", "Xếp hạng bang"),
-        (4, "100% stacked bar", "Cơ cấu rủi ro"),
-        (5, "Scatter + trend", "Liên hệ retention–completion"),
-        (6, "Box plot", "Phân bố theo loại hình"),
-        (7, "Heatmap", "Liên hệ và confusion matrix"),
-        (8, "Grouped bar", "Khoảng cách nhóm"),
-        (9, "Line + bar", "Bất lợi cộng dồn"),
-        (10, "Treemap", "Ngành và bậc văn bằng"),
-        (11, "Gauge", "Xác suất rủi ro trung bình"),
-        (12, "Donut", "Cơ cấu mức rủi ro"),
-        (13, "Matrix", "Thực tế–dự báo"),
-        (14, "Table + data bar", "Danh sách ưu tiên"),
+        (2, "Horizontal bar", "So sánh bang và nhóm"),
+        (3, "100% stacked bar", "Cơ cấu rủi ro"),
+        (4, "Scatter", "Độ mạnh và chiều liên hệ"),
+        (5, "Line chart", "Kết quả qua bốn mức yếu tố"),
+        (6, "Heatmap", "Tương tác nhóm, confusion matrix và hồ sơ rủi ro"),
+        (7, "Grouped bar", "Khoảng cách nhóm và so sánh mô hình"),
+        (8, "Line + bar", "Bất lợi cộng dồn"),
+        (9, "Gauge", "Xác suất rủi ro trung bình"),
+        (10, "Donut", "Cơ cấu mức rủi ro"),
     ])
 
     # Chapter 6 insights
@@ -423,17 +546,26 @@ def build_report(output_path: Path | None = None) -> Path:
         _paragraph(document, "Hành động phân tích: dùng bộ lọc dashboard để kiểm tra tính ổn định của nhận định theo bang, loại cơ sở và bậc đào tạo; không chuyển nhận định mô tả thành phán quyết nhân quả.")
 
     _new_content_page(document, "6.6 Story kết luận")
-    _paragraph(document, "Kết quả cho thấy completion là kết quả của nhiều bối cảnh đồng thời. Retention năm đầu là chỉ báo thực hành rõ nhất trong dữ liệu; Pell/first-generation cho thấy nhu cầu xem xét khoảng cách; loại hình và địa lý xác định nơi cần drill-down. Mô hình tổng hợp các biến thành xác suất để ưu tiên phân tích sâu.")
+    _paragraph(
+        document,
+        f"Bản đồ mở đầu bằng khoảng cách {lowest_state_name}–{highest_state_name}, sau đó "
+        f"giải thích bằng retention, đội ngũ giảng dạy và cơ cấu chương trình. Đáng chú ý, "
+        f"{highest_state_name} có tỷ trọng cơ sở nông thôn/thị trấn "
+        f"{highest_state_context['rural_town_share']:.1%}, cao hơn mức "
+        f"{lowest_state_context['rural_town_share']:.1%} của {lowest_state_name}; vì vậy mức "
+        f"độ hẻo lánh riêng lẻ không mô tả đúng khoảng cách quan sát.",
+    )
+    _paragraph(document, "Kết quả cho thấy completion đi cùng nhiều điều kiện đồng thời. Retention năm đầu là chỉ báo thực hành rõ nhất trong dữ liệu; Pell/first-generation cho thấy nhu cầu xem xét khoảng cách; nguồn lực và cơ cấu đào tạo giúp giải thích khác biệt địa lý. Mô hình tổng hợp các biến thành xác suất để ưu tiên phân tích sâu.")
 
     # Chapter 7 model
     _new_content_page(document, "7. Mô hình Logistic Regression", 1)
     _paragraph(document, "Nhãn dương là cơ sở có completion dưới 40%. Logistic Regression được chọn vì đầu ra nhị phân, có xác suất, dễ tích hợp và đúng rubric.")
     model_pages = [
         ("7.1 Định nghĩa target", "low_completion bằng 1 khi completion_rate < 0,40. Ngưỡng được khóa trước đánh giá. Mô hình không dự báo từng sinh viên."),
-        ("7.2 Feature và chống leakage", "Feature gồm loại trường, bậc, locale, distance, enrollment, Pell, loan, student–faculty ratio, net price, tuition và retention. completion/target bị cấm."),
+        ("7.2 Feature và chống leakage", "Feature gồm hoàn cảnh tài chính, nguồn lực giảng dạy, loại hình, địa bàn, quy mô và mức tuyển chọn. Kịch bản sau năm nhất mới bổ sung retention. completion/target bị cấm."),
         ("7.3 Tiền xử lý trong pipeline", "Median/mode imputation, one-hot encoding, standardization và spline đều nằm trong sklearn Pipeline, được fit chỉ trên train."),
         ("7.4 Temporal holdout", "Train dùng 2017–2021; test là 2022. Cách này mô phỏng dự báo năm mới và khó hơn chia ngẫu nhiên."),
-        ("7.5 Hai cấu hình", "Baseline tối ưu accuracy tổng thể nhưng recall thấp. Balanced spline tăng cân bằng hai lớp và được chọn theo mục tiêu cảnh báo."),
+        ("7.5 Hai kịch bản", "Mô hình nền tảng kiểm tra khả năng dự báo từ tài chính, nguồn lực và bối cảnh. Mô hình sau năm nhất bổ sung khả năng tiếp tục học để đo phần cải thiện."),
         ("7.6 Cut-off", "Cut-off phân lớp là 0,5. Risk level dùng 0,4 và 0,7 để trình bày. Không đổi cut-off sau khi xem test chỉ để đạt chỉ số mong muốn."),
         ("7.7 Ý nghĩa chỉ số", "Accuracy là tổng đúng; balanced accuracy cân bằng lớp; recall đo phát hiện rủi ro; precision đo độ đúng cảnh báo; F1 cân bằng; ROC-AUC đo xếp hạng; Brier đo xác suất."),
     ]
@@ -442,24 +574,24 @@ def build_report(output_path: Path | None = None) -> Path:
         _paragraph(document, body)
 
     _new_content_page(document, "7.8 Kết quả định lượng")
-    _table(document, ["Chỉ số", "Baseline", "Mô hình chọn"], [
-        ("Accuracy", f"{metrics['models']['baseline_logistic']['accuracy']:.2%}", f"{selected['accuracy']:.2%}"),
-        ("Balanced Accuracy", f"{metrics['models']['baseline_logistic']['balanced_accuracy']:.2%}", f"{selected['balanced_accuracy']:.2%}"),
-        ("Recall", f"{metrics['models']['baseline_logistic']['recall']:.2%}", f"{selected['recall']:.2%}"),
-        ("Precision", f"{metrics['models']['baseline_logistic']['precision']:.2%}", f"{selected['precision']:.2%}"),
-        ("F1", f"{metrics['models']['baseline_logistic']['f1']:.2%}", f"{selected['f1']:.2%}"),
-        ("ROC-AUC", f"{metrics['models']['baseline_logistic']['roc_auc']:.3f}", f"{selected['roc_auc']:.3f}"),
-        ("Brier", f"{metrics['models']['baseline_logistic']['brier_score']:.3f}", f"{selected['brier_score']:.3f}"),
+    _table(document, ["Chỉ số", "Điều kiện nền tảng", "Bổ sung sau năm nhất"], [
+        ("Accuracy", f"{structural['accuracy']:.2%}", f"{selected['accuracy']:.2%}"),
+        ("Balanced Accuracy", f"{structural['balanced_accuracy']:.2%}", f"{selected['balanced_accuracy']:.2%}"),
+        ("Recall", f"{structural['recall']:.2%}", f"{selected['recall']:.2%}"),
+        ("Precision", f"{structural['precision']:.2%}", f"{selected['precision']:.2%}"),
+        ("F1", f"{structural['f1']:.2%}", f"{selected['f1']:.2%}"),
+        ("ROC-AUC", f"{structural['roc_auc']:.3f}", f"{selected['roc_auc']:.3f}"),
+        ("Brier", f"{structural['brier_score']:.3f}", f"{selected['brier_score']:.3f}"),
     ])
-    _paragraph(document, "Mô hình chọn qua cổng Accuracy 80%. Recall dưới 80% được công bố như giới hạn; ưu tiên balanced model vì giảm bỏ sót đáng kể so với baseline.")
+    _paragraph(document, "Cả hai kịch bản qua cổng Accuracy 80%. Việc thêm thông tin sau năm nhất làm khả năng dự báo tăng, qua đó kiểm chứng vai trò của khả năng tiếp tục học như một tín hiệu sớm.")
 
     _new_content_page(document, "7.9 Ma trận nhầm lẫn")
     _image(document, FIGURE_DIR / "model_confusion_matrix.png", "Hình 7. Ma trận nhầm lẫn trên temporal test 2022.")
-    _paragraph(document, "Có 3.200 true negative, 635 false positive, 354 false negative và 1.170 true positive. False negative là trường hợp cần lưu ý trong cảnh báo sớm.")
+    _paragraph(document, "Có 3.194 true negative, 641 false positive, 359 false negative và 1.165 true positive. False negative là trường hợp cần lưu ý khi diễn giải mô hình.")
 
     _new_content_page(document, "7.10 ROC và Precision–Recall")
     _image(document, FIGURE_DIR / "model_roc_pr.png", "Hình 8. ROC và Precision–Recall trên test.")
-    _paragraph(document, "ROC-AUC 0,874 cho thấy khả năng xếp hạng khá tốt. PR curve cần đọc cùng prevalence của lớp rủi ro và mục tiêu sử dụng.")
+    _paragraph(document, "ROC-AUC 0,877 cho thấy khả năng xếp hạng khá tốt. PR curve cần đọc cùng prevalence của lớp rủi ro và mục tiêu sử dụng.")
 
     _new_content_page(document, "7.11 Calibration")
     _image(document, FIGURE_DIR / "model_calibration.png", "Hình 9. Độ hiệu chỉnh xác suất.")
@@ -472,7 +604,60 @@ def build_report(output_path: Path | None = None) -> Path:
     ])
     _paragraph(document, "Permutation importance là đóng góp dự báo có điều kiện trên cấu hình và test hiện tại; không phải hệ số tác động nhân quả.")
 
-    _new_content_page(document, "7.13 Pseudocode")
+    _new_content_page(document, "7.13 Điều rút ra và cách dùng dự báo")
+    _paragraph(
+        document,
+        f"Trên {prediction_count:,} quan sát hiện tại, mô hình phân loại {predicted_low_count:,} "
+        f"nhóm ({predicted_low_count / prediction_count:.1%}) có khả năng tỷ lệ hoàn thành "
+        f"dưới 40% tại cut-off 0,5. Có {high_risk_count:,} nhóm "
+        f"({high_risk_count / prediction_count:.1%}) ở mức rủi ro cao từ 70% trở lên.",
+    )
+    _paragraph(
+        document,
+        f"So với mô hình chỉ dùng điều kiện nền tảng, việc bổ sung tỷ lệ tiếp tục học sau "
+        f"năm nhất làm Accuracy tăng {selected['accuracy'] - structural['accuracy']:.2%}, "
+        f"Recall tăng {selected['recall'] - structural['recall']:.2%} và ROC-AUC tăng "
+        f"{selected['roc_auc'] - structural['roc_auc']:.3f}. Đây là bằng chứng dự báo cho "
+        f"thấy việc quay lại học năm tiếp theo là mốc theo dõi thực tế quan trọng.",
+    )
+    _paragraph(
+        document,
+        "Dashboard kết hợp mức tiếp tục học với áp lực nguồn lực gồm nhiều sinh viên trên "
+        "giảng viên, chi giảng dạy thấp và ít giảng viên toàn thời gian. Nhóm tiếp tục học "
+        "thấp được ưu tiên kiểm tra; áp lực nguồn lực giúp khoanh vùng vấn đề cần xem sâu "
+        "hơn. Kết quả không chứng minh tăng một nguồn lực sẽ trực tiếp tạo ra mức cải thiện cụ thể.",
+    )
+    _paragraph(
+        document,
+        f"Hồ sơ cần ưu tiên cao nhất hiện tại là {priority_degree_label} · "
+        f"{top_priority.control} · {top_priority.locale_group}, gồm "
+        f"{int(top_priority.group_count):,} quan sát, rủi ro dự báo trung bình "
+        f"{top_priority.average_risk:.1%} và tỷ lệ hoàn thành điển hình "
+        f"{top_priority.median_completion:.1%}.",
+    )
+    _paragraph(
+        document,
+        f"Tỷ lệ tiếp tục học sau năm nhất điển hình của hồ sơ này là "
+        f"{top_priority.median_retention:.1%}, so với trung vị toàn dữ liệu "
+        f"{reference_retention:.1%}. Khi chỉ đưa retention về mức chung và giữ nguyên các "
+        f"yếu tố khác, xác suất dự báo giảm {retention_risk_gap:.1%}. Đây là giải thích "
+        f"phản thực tế của mô hình, không phải bằng chứng retention gây ra đúng mức thay đổi đó.",
+    )
+    _paragraph(
+        document,
+        f"Tỷ lệ giảng viên toàn thời gian của hồ sơ là {priority_full_time_faculty:.1%}, "
+        f"so với mức chung {reference_full_time_faculty:.1%}; kiểm tra tương tự cho thấy "
+        f"chênh dự báo {faculty_risk_gap:.1%}. Hai hướng ưu tiên là hỗ trợ việc quay lại "
+        f"sau năm nhất và rà soát mức độ sẵn có, tính liên tục của đội ngũ giảng dạy.",
+    )
+    _bullets(document, [
+        "Theo dõi tỷ lệ quay lại học sau năm nhất như mốc cảnh báo sau năm đầu.",
+        "Ưu tiên phân tích nhóm vừa có khả năng tiếp tục học thấp vừa chịu áp lực nguồn lực.",
+        "Đối chiếu thêm hoàn cảnh tài chính trước khi đề xuất cố vấn học tập hoặc hỗ trợ môn học.",
+        "Không dùng xác suất để xếp hạng, xử phạt hoặc ra quyết định tự động về từng trường hay sinh viên.",
+    ])
+
+    _new_content_page(document, "7.14 Pseudocode")
     pseudo = document.add_paragraph()
     run = pseudo.add_run(
         "INPUT history 2017–2022\n"
@@ -507,10 +692,11 @@ def build_report(output_path: Path | None = None) -> Path:
 
     _new_content_page(document, "9.1 Kịch bản demo")
     _bullets(document, [
-        "Mở trang 1, chỉ bản đồ và nêu khoảng cách địa lý.",
-        "Lọc một bang, đi sâu tới loại cơ sở và institution point map.",
+        "Mở trang 1, chỉ bản đồ và giải thích chênh lệch kết quả giữa các bang.",
+        "Lọc một bang, đi sâu tới loại hình, bậc đào tạo và khu vực sống.",
         "Sang trang 2, giải thích retention, Pell gap và bất lợi cộng dồn.",
-        "Sang trang 3, giải thích Accuracy/Recall, confusion matrix và action list.",
+        "Sang trang 3, nêu mô hình dự báo completion dưới 40%, so sánh hai kịch bản và chỉ ma trận tiếp tục học–nguồn lực.",
+        "Kết luận bằng ba ưu tiên: theo dõi sau năm nhất, kiểm tra áp lực nguồn lực và đối chiếu khó khăn tài chính.",
         "Kết thúc bằng giới hạn: dự báo cơ sở, không dự báo từng sinh viên; association không phải causation.",
     ])
     _paragraph(document, "Cần quay video backup sau khi giao diện cuối được duyệt và điền link video vào bản nộp.")

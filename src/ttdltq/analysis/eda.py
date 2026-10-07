@@ -14,15 +14,27 @@ from ttdltq.config import OUTPUT_DIR, PROCESSED_DIR, ensure_runtime_directories
 
 
 FACTOR_LABELS = {
-    "retention_rate": "Duy trì năm đầu",
-    "pell_share": "Tỷ lệ nhận Pell Grant",
-    "federal_loan_share": "Tỷ lệ vay liên bang",
-    "student_faculty_ratio": "Sinh viên/giảng viên",
-    "net_price": "Chi phí ròng",
+    "retention_rate": "Tiếp tục học sau năm nhất",
+    "pell_share": "Sinh viên cần hỗ trợ tài chính",
+    "federal_loan_share": "Sinh viên sử dụng khoản vay liên bang",
+    "student_faculty_ratio": "Số sinh viên trên một giảng viên",
+    "net_price": "Chi phí thực trả sau hỗ trợ",
     "tuition_in_state": "Học phí trong bang",
-    "log_undergrad_enrollment": "Quy mô (log)",
-    "instructional_spend_per_fte": "Chi giảng dạy/SV",
-    "full_time_faculty_share": "Tỷ lệ GV toàn thời gian",
+    "log_undergrad_enrollment": "Quy mô sinh viên",
+    "instructional_spend_per_fte": "Chi cho giảng dạy trên mỗi sinh viên",
+    "full_time_faculty_share": "Giảng viên làm việc toàn thời gian",
+}
+
+FACTOR_UNITS = {
+    "retention_rate": "percent",
+    "pell_share": "percent",
+    "federal_loan_share": "percent",
+    "student_faculty_ratio": "ratio",
+    "net_price": "usd",
+    "tuition_in_state": "usd",
+    "log_undergrad_enrollment": "log",
+    "instructional_spend_per_fte": "usd",
+    "full_time_faculty_share": "percent",
 }
 
 
@@ -79,6 +91,44 @@ def correlation_table(frame: pd.DataFrame) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows).sort_values("absolute_rho", ascending=False)
+
+
+def factor_band_summary(frame: pd.DataFrame) -> pd.DataFrame:
+    """Summarize completion across four easy-to-explain levels of each factor."""
+
+    labels = ["Mức 1 · thấp nhất", "Mức 2", "Mức 3", "Mức 4 · cao nhất"]
+    rows: list[dict[str, Any]] = []
+    for factor, factor_label in FACTOR_LABELS.items():
+        if factor not in frame:
+            continue
+        valid = frame[[factor, "completion_rate", "low_completion"]].dropna(
+            subset=[factor, "completion_rate"]
+        ).copy()
+        if len(valid) < 100 or valid[factor].nunique() < 4:
+            continue
+        try:
+            valid["factor_level"] = pd.qcut(
+                valid[factor], q=4, labels=labels, duplicates="drop"
+            )
+        except ValueError:
+            continue
+        for order, (level, part) in enumerate(
+            valid.groupby("factor_level", observed=True), start=1
+        ):
+            rows.append(
+                {
+                    "factor": factor,
+                    "factor_label": factor_label,
+                    "unit": FACTOR_UNITS[factor],
+                    "level_order": order,
+                    "factor_level": str(level),
+                    "institution_count": len(part),
+                    "factor_median": float(part[factor].median()),
+                    "median_completion_rate": float(part["completion_rate"].median()),
+                    "low_completion_share": float(part["low_completion"].mean()),
+                }
+            )
+    return pd.DataFrame(rows)
 
 
 def equity_summary(equity: pd.DataFrame) -> pd.DataFrame:
@@ -294,6 +344,7 @@ def build_insights(
     correlations: pd.DataFrame,
     equity: pd.DataFrame,
     disadvantage: pd.DataFrame,
+    factor_bands: pd.DataFrame,
 ) -> list[dict[str, Any]]:
     insights: list[dict[str, Any]] = []
 
@@ -314,37 +365,41 @@ def build_insights(
         }
     )
 
-    control = category[category["dimension"] == "control"].sort_values(
-        "weighted_completion_rate"
+    retention = factor_bands[factor_bands["factor"] == "retention_rate"].sort_values(
+        "level_order"
     )
-    low_control = control.iloc[0]
-    high_control = control.iloc[-1]
+    retention_gap = (
+        retention.iloc[-1].median_completion_rate
+        - retention.iloc[0].median_completion_rate
+    )
     insights.append(
         {
             "id": "INS-02",
-            "research_question": "RQ1/RQ3",
-            "title": "Loại hình cơ sở đi cùng khoảng cách hoàn thành",
+            "research_question": "RQ2/RQ3",
+            "title": "Tiếp tục học sau năm nhất là yếu tố nổi bật nhất",
             "statement": (
-                f"Tỷ lệ hoàn thành có trọng số thấp nhất ở nhóm {low_control.group} "
-                f"({low_control.weighted_completion_rate:.1%}) và cao nhất ở nhóm "
-                f"{high_control.group} ({high_control.weighted_completion_rate:.1%})."
+                f"Nhóm có tỷ lệ tiếp tục học sau năm nhất cao nhất có trung vị hoàn thành "
+                f"cao hơn nhóm thấp nhất {retention_gap:.1%}."
             ),
-            "caveat": "Không kiểm soát đầy đủ khác biệt đầu vào và sứ mệnh đào tạo giữa các nhóm trường.",
+            "caveat": "Đây là liên hệ rất rõ nhưng vẫn không chứng minh việc tăng retention một cách cơ học sẽ trực tiếp tạo ra mức tăng tương ứng.",
         }
     )
 
-    strongest = correlations.iloc[0]
-    direction = "cùng chiều" if strongest.spearman_rho > 0 else "ngược chiều"
+    ratio = factor_bands[
+        factor_bands["factor"] == "student_faculty_ratio"
+    ].sort_values("level_order")
+    ratio_gap = ratio.iloc[-1].median_completion_rate - ratio.iloc[0].median_completion_rate
     insights.append(
         {
             "id": "INS-03",
-            "research_question": "RQ2/RQ3",
-            "title": "Chỉ báo liên hệ mạnh nhất trong EDA",
+            "research_question": "RQ3",
+            "title": "Lớp học đông hơn đi cùng tỷ lệ hoàn thành thấp hơn",
             "statement": (
-                f"{strongest.factor_label} có liên hệ {direction} mạnh nhất với tỷ lệ hoàn thành "
-                f"trong các biến đã xét (Spearman rho={strongest.spearman_rho:.2f}, N={int(strongest.n):,})."
+                f"Từ nhóm có ít sinh viên/giảng viên nhất đến nhóm cao nhất, trung vị hoàn thành "
+                f"thay đổi {ratio_gap:+.1%}; hệ số liên hệ Spearman là "
+                f"{correlations.set_index('factor').loc['student_faculty_ratio', 'spearman_rho']:.2f}."
             ),
-            "caveat": "Hệ số tương quan không chứng minh quan hệ nhân quả và chưa kiểm soát đồng thời các biến khác.",
+            "caveat": "Tỷ lệ sinh viên/giảng viên không phản ánh trực tiếp quy mô từng lớp và còn liên quan loại chương trình.",
         }
     )
 
@@ -357,12 +412,12 @@ def build_insights(
             {
                 "id": "INS-04",
                 "research_question": "RQ2/RQ4",
-                "title": "Khoảng cách theo nhu cầu hỗ trợ tài chính",
+                "title": "Khó khăn tài chính đi cùng khoảng cách hoàn thành",
                 "statement": (
-                    f"Nhóm không nhận Pell Grant có tỷ lệ hoàn thành ba năm cao hơn nhóm nhận Pell "
-                    f"khoảng {gap:.1%} trong dữ liệu có thể công bố."
+                    f"Sinh viên không nhận Pell Grant có tỷ lệ hoàn thành sau ba năm cao hơn "
+                    f"sinh viên nhận hỗ trợ này khoảng {gap:.1%} trong dữ liệu có thể công bố."
                 ),
-                "caveat": "Pell Grant là chỉ báo nhu cầu tài chính; dữ liệu Title IV và privacy suppression giới hạn tính đại diện.",
+                "caveat": "Pell Grant là khoản hỗ trợ cho người có nhu cầu tài chính; nó phản ánh hoàn cảnh khó khăn chứ không phải nguyên nhân làm kết quả thấp.",
             }
         )
 
@@ -372,13 +427,13 @@ def build_insights(
         {
             "id": "INS-05",
             "research_question": "RQ5",
-            "title": "Bất lợi cộng dồn đi cùng kết quả thấp hơn",
+            "title": "Nhiều điều kiện bất lợi cùng xuất hiện làm khoảng cách rõ hơn",
             "statement": (
-                f"Trung vị hoàn thành giảm từ {first.median_completion_rate:.1%} khi có "
-                f"{int(first.disadvantage_count)} bất lợi xuống {last.median_completion_rate:.1%} "
-                f"khi có {int(last.disadvantage_count)} bất lợi trong định nghĩa phân vị đã khóa."
+                f"Trung vị hoàn thành giảm từ {first.median_completion_rate:.1%} xuống "
+                f"{last.median_completion_rate:.1%} khi bốn điều kiện cùng bất lợi: nhu cầu hỗ trợ "
+                f"tài chính cao, chi phí cao, nhiều sinh viên/giảng viên và ít tiếp tục học sau năm nhất."
             ),
-            "caveat": "Chỉ số bất lợi là quy tắc mô tả dựa trên phân vị, không phải thang đo nhân quả.",
+            "caveat": "Các điều kiện được xác định bằng phân vị để so sánh; đây không phải thang điểm đánh giá từng trường hay từng sinh viên.",
         }
     )
     return insights
@@ -422,6 +477,7 @@ def run_eda() -> dict[str, Any]:
         ignore_index=True,
     )
     correlations = correlation_table(institutions)
+    factor_bands = factor_band_summary(institutions)
     equity = equity_summary(equity_long)
     disadvantage, thresholds = disadvantage_summary(institutions)
 
@@ -429,13 +485,14 @@ def run_eda() -> dict[str, Any]:
     out.mkdir(parents=True, exist_ok=True)
     summaries.to_csv(out / "category_summary.csv", index=False, encoding="utf-8-sig")
     correlations.to_csv(out / "factor_correlations.csv", index=False, encoding="utf-8-sig")
+    factor_bands.to_csv(out / "factor_band_summary.csv", index=False, encoding="utf-8-sig")
     equity.to_csv(out / "equity_summary.csv", index=False, encoding="utf-8-sig")
     disadvantage.to_csv(out / "disadvantage_summary.csv", index=False, encoding="utf-8-sig")
     thresholds.to_csv(out / "disadvantage_thresholds.csv", index=False, encoding="utf-8-sig")
 
     create_static_charts(institutions, state, correlations, disadvantage)
     insights = build_insights(
-        institutions, state, summaries, correlations, equity, disadvantage
+        institutions, state, summaries, correlations, equity, disadvantage, factor_bands
     )
     with (out / "insights.json").open("w", encoding="utf-8") as handle:
         json.dump(insights, handle, ensure_ascii=False, indent=2)
@@ -444,6 +501,7 @@ def run_eda() -> dict[str, Any]:
     return {
         "category_rows": len(summaries),
         "correlation_rows": len(correlations),
+        "factor_band_rows": len(factor_bands),
         "equity_rows": len(equity),
         "disadvantage_rows": len(disadvantage),
         "insight_count": len(insights),

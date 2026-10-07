@@ -12,6 +12,7 @@ venv/
 .vscode/
 .DS_Store
 Thumbs.db
+~$*.docx
 
 # Environment and logs
 .env
@@ -27,4 +28,5 @@ data/interim/*
 # because they are rubric evidence and compact enough for the repository.
 models/*.joblib
 outputs/eda/*.csv
+outputs/review/
 

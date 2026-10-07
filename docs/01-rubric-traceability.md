@@ -23,10 +23,10 @@ File rubric gốc là tài liệu chỉ đọc. SHA-256 được khóa trong
 | Cross-filtering | Bộ lọc toàn cục tác động đồng thời các KPI và biểu đồ trên trang | Đạt |
 | Insight/story | `outputs/eda/insights.json`, `docs/06-insights-and-story.md`, insight card trên dashboard | Đạt bản đầu |
 | Logistic Regression | baseline và balanced spline Logistic; classifier cuối là Logistic Regression | Đạt |
-| Trực quan dự báo | Gauge, donut, confusion matrix, feature importance, action list | Đạt |
-| Accuracy >80% | Temporal test 2022: 81,55% | Đạt |
+| Trực quan dự báo | Gauge, donut, confusion matrix, feature importance và rủi ro tổng hợp theo nhóm | Đạt |
+| Accuracy >80% | Test 2022: nền tảng 80,09%; sau năm nhất 81,34% | Đạt |
 | Pipeline/sơ đồ/pseudocode | `docs/03-data-processing.md`, báo cáo DOCX | Đạt bản đầu |
-| Báo cáo khoa học >=40 trang | `report/TTDLTQ_report_draft.docx`: Word kiểm tra 73 trang, 5.039 từ | Đạt số trang ở bản thảo; cần điền thông tin nhóm và biên tập cuối |
+| Báo cáo khoa học >=40 trang | `report/TTDLTQ_report_draft.docx`: Word kiểm tra 73 trang, 5.183 từ | Đạt số trang ở bản thảo; cần điền thông tin nhóm và biên tập cuối |
 | Video demo backup | Kịch bản có trong báo cáo | Chưa quay video |
 | Bảo vệ hiểu code | `docs/08-reproducibility.md` và nội dung giải thích chỉ số | Cần người thực hiện luyện trình bày |
 

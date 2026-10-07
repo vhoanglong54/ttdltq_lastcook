@@ -1,7 +1,7 @@
 {
   "target": "low_completion",
   "target_definition": "completion_rate < 0.40",
-  "positive_class": "institution with low completion rate",
+  "positive_class": "institution-year group with completion rate below 40%",
   "probability_cutoff": 0.5,
   "features": {
     "numeric": [
@@ -11,6 +11,11 @@
       "student_faculty_ratio",
       "net_price",
       "tuition_in_state",
+      "admission_rate",
+      "instructional_spend_per_fte",
+      "average_faculty_salary",
+      "full_time_faculty_share",
+      "age_25_plus_share",
       "retention_rate"
     ],
     "categorical": [
@@ -19,6 +24,53 @@
       "locale_group",
       "distance_only"
     ]
+  },
+  "model_feature_sets": {
+    "structural_logistic": {
+      "meaning": "Bối cảnh tài chính, nguồn lực và loại hình; không dùng retention",
+      "numeric": [
+        "log_undergrad_enrollment",
+        "pell_share",
+        "federal_loan_share",
+        "student_faculty_ratio",
+        "net_price",
+        "tuition_in_state",
+        "admission_rate",
+        "instructional_spend_per_fte",
+        "average_faculty_salary",
+        "full_time_faculty_share",
+        "age_25_plus_share"
+      ],
+      "categorical": [
+        "predominant_degree",
+        "control",
+        "locale_group",
+        "distance_only"
+      ]
+    },
+    "early_warning_logistic": {
+      "meaning": "Mô hình nền tảng cộng tỷ lệ tiếp tục học sau năm nhất",
+      "numeric": [
+        "log_undergrad_enrollment",
+        "pell_share",
+        "federal_loan_share",
+        "student_faculty_ratio",
+        "net_price",
+        "tuition_in_state",
+        "admission_rate",
+        "instructional_spend_per_fte",
+        "average_faculty_salary",
+        "full_time_faculty_share",
+        "age_25_plus_share",
+        "retention_rate"
+      ],
+      "categorical": [
+        "predominant_degree",
+        "control",
+        "locale_group",
+        "distance_only"
+      ]
+    }
   },
   "split": {
     "strategy": "temporal_last_year_holdout",
@@ -36,45 +88,45 @@
     ]
   },
   "models": {
-    "baseline_logistic": {
-      "accuracy": 0.8175032655346147,
-      "balanced_accuracy": 0.7497148620763995,
-      "recall": 0.59251968503937,
-      "specificity": 0.9069100391134289,
-      "precision": 0.7166666666666667,
-      "f1": 0.6487068965517241,
-      "roc_auc": 0.8494892669055222,
-      "brier_score": 0.13261948884362848
+    "structural_logistic": {
+      "accuracy": 0.8008956894943087,
+      "balanced_accuracy": 0.7853629199218416,
+      "recall": 0.7493438320209974,
+      "specificity": 0.8213820078226858,
+      "precision": 0.6250684181718664,
+      "f1": 0.681587585795285,
+      "roc_auc": 0.846759026373333,
+      "brier_score": 0.14534155945750307
     },
-    "balanced_spline_logistic": {
-      "accuracy": 0.8154506437768241,
-      "balanced_accuracy": 0.8010681764518679,
-      "recall": 0.7677165354330708,
-      "specificity": 0.834419817470665,
-      "precision": 0.6481994459833795,
-      "f1": 0.7029137879243016,
-      "roc_auc": 0.8736672176082292,
-      "brier_score": 0.136047389433256
+    "early_warning_logistic": {
+      "accuracy": 0.8133980220190334,
+      "balanced_accuracy": 0.7986454879254826,
+      "recall": 0.7644356955380578,
+      "specificity": 0.8328552803129075,
+      "precision": 0.6450719822812846,
+      "f1": 0.6996996996996997,
+      "roc_auc": 0.8765038822559176,
+      "brier_score": 0.1333872650382876
     }
   },
-  "selected_model": "balanced_spline_logistic",
+  "selected_model": "early_warning_logistic",
   "quality_gate": {
     "accuracy_at_least_0_80": true,
     "no_forbidden_features": true
   },
   "quality_gate_passed": true,
   "diagnostic_targets": {
-    "balanced_accuracy_at_least_0_80": true,
+    "balanced_accuracy_at_least_0_80": false,
     "recall_at_least_0_80": false
   },
   "confusion_matrix": [
     [
-      3200,
-      635
+      3194,
+      641
     ],
     [
-      354,
-      1170
+      359,
+      1165
     ]
   ]
 }
