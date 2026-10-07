@@ -38,12 +38,12 @@ FACTOR_META = {
         "ratio",
     ),
     "pell_share": (
-        "Sinh viên cần hỗ trợ tài chính",
+        "Tỷ lệ sinh viên nhận Pell Grant",
         "Đo bằng tỷ lệ nhận Pell Grant — hỗ trợ dành chủ yếu cho người có hoàn cảnh khó khăn.",
         "percent",
     ),
     "federal_loan_share": (
-        "Sinh viên sử dụng khoản vay",
+        "Tỷ lệ sử dụng khoản vay liên bang",
         "Tỷ lệ sinh viên sử dụng khoản vay giáo dục liên bang Hoa Kỳ.",
         "percent",
     ),
@@ -72,8 +72,8 @@ FACTOR_META = {
 MODEL_LABELS = {
     "retention_rate": "Tiếp tục học sau năm nhất",
     "student_faculty_ratio": "Sinh viên / giảng viên",
-    "pell_share": "Cần hỗ trợ tài chính",
-    "federal_loan_share": "Sử dụng khoản vay",
+    "pell_share": "Tỷ lệ nhận Pell Grant",
+    "federal_loan_share": "Tỷ lệ sử dụng khoản vay liên bang",
     "net_price": "Chi phí thực trả",
     "tuition_in_state": "Học phí",
     "log_undergrad_enrollment": "Quy mô sinh viên",
@@ -114,13 +114,13 @@ RISK_PROFILE_FACTORS = {
         "percent",
     ),
     "pell_share": (
-        "Nhiều sinh viên cần hỗ trợ tài chính",
+        "Tỷ lệ sinh viên nhận Pell Grant cao",
         "high",
         "Tăng tư vấn học bổng, hỗ trợ khẩn cấp và kết nối dịch vụ sinh viên",
         "percent",
     ),
     "federal_loan_share": (
-        "Nhiều sinh viên sử dụng khoản vay",
+        "Tỷ lệ sử dụng khoản vay liên bang cao",
         "high",
         "Tăng tư vấn tài chính và theo dõi áp lực chi phí học tập",
         "percent",
@@ -447,7 +447,10 @@ def glossary() -> None:
             - **Hoàn thành chương trình:** tốt nghiệp trong tối đa 150% thời gian chuẩn;
               chương trình 4 năm được theo dõi trong tối đa 6 năm.
             - **Tiếp tục học sau năm nhất:** quay lại học năm tiếp theo thay vì dừng học.
-            - **Pell Grant:** hỗ trợ tài chính dành chủ yếu cho sinh viên có hoàn cảnh khó khăn.
+            - **Tỷ lệ nhận Pell Grant:** tỷ lệ sinh viên nhận khoản hỗ trợ chủ yếu dành cho
+              người có nhu cầu tài chính; đây là chỉ báo hoàn cảnh, không phải số tiền hỗ trợ.
+            - **Tỷ lệ sử dụng khoản vay liên bang:** tỷ lệ sinh viên sử dụng khoản vay giáo
+              dục liên bang; không phải số tiền vay hoặc dư nợ trung bình.
             - **Chi phí thực trả:** phần chi phí còn lại sau học bổng và hỗ trợ.
             - **Nhóm kết quả thấp:** tỷ lệ hoàn thành dưới 40%, dùng làm nhãn cho mô hình.
             """
@@ -455,10 +458,12 @@ def glossary() -> None:
 
 
 def overview_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
-    st.header("1 · Kết quả học tập khác nhau ở đâu?")
+    st.header("1 · Kết quả duy trì và hoàn thành khác nhau ở đâu?")
     st.markdown(
-        '<div class="note"><b>Ý chính:</b> Bản đồ chỉ ra nơi có kết quả khác nhau. '
-        "Trang 2 mới đi sâu vào các yếu tố liên quan.</div>",
+        '<div class="note"><b>RQ1:</b> Tỷ lệ hoàn thành chương trình, duy trì sau năm nhất '
+        'và rút khỏi chương trình khác nhau như thế nào giữa các bang, loại hình quản lý, '
+        'bậc đào tạo chính, địa bàn và hình thức đào tạo từ xa? Bản đồ và các phép so sánh '
+        'trên trang này mô tả khoảng cách; trang 2 mới phân tích các yếu tố liên quan.</div>',
         unsafe_allow_html=True,
     )
     weights = frame["undergrad_enrollment"].clip(lower=0)
@@ -617,7 +622,7 @@ def overview_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
 
 
 def factor_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
-    st.header("2 · Những yếu tố nào liên quan đến kết quả học tập?")
+    st.header("2 · Tài chính và nguồn lực liên quan thế nào với kết quả?")
 
     retention = factor_levels(frame, "retention_rate")
     ratio = factor_levels(frame, "student_faculty_ratio")
@@ -630,7 +635,7 @@ def factor_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
     peak_disadvantage = disadvantage.nlargest(1, "low_completion_share").iloc[0]
 
     st.markdown(
-        f'<div class="note"><b>Kết luận điều hành:</b> Trong phạm vi bộ lọc hiện tại, '
+        f'<div class="note"><b>RQ2–RQ5 · Kết luận điều hành:</b> Trong phạm vi bộ lọc hiện tại, '
         f'khả năng tiếp tục học sau năm nhất là tín hiệu phân tách kết quả rõ nhất: nhóm '
         f'cao nhất có trung vị hoàn thành chênh <b>{abs(retention_gap) * 100:.1f} điểm phần '
         f'trăm</b> so với nhóm thấp nhất. Khoảng cách cũng đi cùng khả năng tiếp cận giảng '
@@ -867,10 +872,12 @@ def factor_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
 
 
 def model_page(data: dict[str, Any], frame: pd.DataFrame) -> None:
-    st.header("3 · Khi kết hợp các yếu tố, mô hình dự báo được gì?")
+    st.header("3 · Mô hình nhận diện nhóm completion dưới 40% tốt đến đâu?")
     st.markdown(
-        '<div class="note"><b>Mục đích:</b> Logistic Regression kết hợp các yếu tố để nhận diện '
-        "nhóm có tỷ lệ hoàn thành dưới 40%, sau đó tổng hợp thành các hồ sơ cần ưu tiên.</div>",
+        '<div class="note"><b>RQ6:</b> Logistic Regression có nhận diện được các nhóm cơ sở–năm '
+        'có tỷ lệ hoàn thành dưới 40% trên năm kiểm tra ngoài thời gian hay không, và việc '
+        'bổ sung tỷ lệ duy trì sau năm nhất cải thiện Accuracy, Recall, Balanced Accuracy và '
+        'ROC-AUC đến mức nào? Kết quả chỉ dùng để sắp xếp nhóm cần ưu tiên kiểm tra.</div>',
         unsafe_allow_html=True,
     )
     metrics = data["metrics"]
@@ -1212,16 +1219,18 @@ def main() -> None:
         st.code("python scripts/build_dataset.py\npython scripts/run_eda.py\npython scripts/train_model.py --prefer-temporal")
         st.stop()
 
-    st.title("🎓 Các yếu tố liên quan đến kết quả học tập đại học")
+    st.title("🎓 Các yếu tố liên quan đến duy trì và hoàn thành đại học")
     st.markdown(
-        '<div class="definition"><b>Câu hỏi trung tâm:</b> Điều kiện nào thường đi cùng khả năng '
-        "hoàn thành chương trình cao hoặc thấp? Kết quả được trình bày theo nhóm địa lý, "
-        "bậc đào tạo, loại hình và điều kiện học tập.</div>",
+        '<div class="definition"><b>Câu hỏi trung tâm:</b> Tỷ lệ hoàn thành, duy trì sau năm '
+        'nhất và rút khỏi chương trình khác nhau ở đâu; các chỉ báo tài chính, nguồn lực và '
+        'điều kiện đào tạo liên hệ với những khoảng cách đó như thế nào; và mô hình có nhận '
+        'diện được nhóm cơ sở–năm có completion dưới 40% hay không? Các kết quả phản ánh '
+        'mối liên hệ trong dữ liệu quan sát, không chứng minh nguyên nhân.</div>',
         unsafe_allow_html=True,
     )
     glossary()
     st.sidebar.title("Điều hướng và bộ lọc")
-    page = st.sidebar.radio("Trang", ["1 · Kết quả khác nhau ở đâu?", "2 · Yếu tố nào liên quan?", "3 · Mô hình tổng hợp các yếu tố"])
+    page = st.sidebar.radio("Trang", ["1 · Phân bố kết quả", "2 · Tài chính và nguồn lực", "3 · Dự báo completion thấp"])
     filtered = global_filters(data["institutions"])
     st.sidebar.caption(f"Đang phân tích {filtered['unitid'].nunique():,} nhóm cơ sở có dữ liệu.")
     if filtered.empty:
